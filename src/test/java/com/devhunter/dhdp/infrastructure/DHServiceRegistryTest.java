@@ -1,29 +1,23 @@
 package com.devhunter.dhdp.infrastructure;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 
-class DHServiceRegistryTest {
-
+public class DHServiceRegistryTest {
     public DHServiceRegistry mServiceRegistry;
 
-    @BeforeEach
-    void setUp() {
+    @Before
+    public void setUp() {
         mServiceRegistry = new DHServiceRegistry();
-    }
-
-    @AfterEach
-    void tearDown() {
     }
 
     /**
      * test to register a service
      */
     @Test
-    void registerAndResolveTestService() {
+    public void registerAndResolveTestService() {
         // register
         DHDummyService dummyService = new DHDummyService("dummyService");
         mServiceRegistry.register(DHDummyService.class, dummyService);
@@ -40,7 +34,7 @@ class DHServiceRegistryTest {
      *
      */
     @Test
-    void registerAndResolveServiceThatIsAlreadyRegistered() {
+    public void registerAndResolveServiceThatIsAlreadyRegistered() {
         //register
         DHDummyService dummyService1 = new DHDummyService("dummyService1");
         DHDummyService dummyService2 = new DHDummyService("dummyService2");
@@ -56,7 +50,7 @@ class DHServiceRegistryTest {
      * test to resolve a registered service by Service class
      */
     @Test
-    void resolveByClass() {
+    public void resolveByClass() {
         DHDummyService dummyService = new DHDummyService("dummyService");
         mServiceRegistry.register(DHDummyService.class, dummyService);
         DHDummyService resolvedService = mServiceRegistry.resolve(DHDummyService.class);
@@ -67,7 +61,7 @@ class DHServiceRegistryTest {
      * test to resolve an unregistered service
      */
     @Test
-    void resolveUnregisteredTestService() {
+    public void resolveUnregisteredTestService() {
         assertNull(mServiceRegistry.resolve(DHDummyService.class));
     }
 }

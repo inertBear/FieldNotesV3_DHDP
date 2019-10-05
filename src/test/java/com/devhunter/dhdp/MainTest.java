@@ -1,24 +1,12 @@
+package com.devhunter.dhdp;
+
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.*;
 
-
-class MainTest {
-
+public class MainTest {
     private static JsonParser mJsonParser = new JsonParser();
-
-    @BeforeEach
-    void setUp() {
-        // startup server
-    }
-
-    @AfterEach
-    void tearDown() {
-        // stop server
-    }
 
     /**
      * Test connection to ServerSocket @ localhost
