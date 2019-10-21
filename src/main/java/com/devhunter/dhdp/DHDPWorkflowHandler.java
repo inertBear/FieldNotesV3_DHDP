@@ -1,10 +1,10 @@
 package com.devhunter.dhdp;
 
-import com.devhunter.DHDPConnector4J.DHDPEntity;
 import com.devhunter.DHDPConnector4J.DHDPHeader;
-import com.devhunter.dhdp.fieldnotes.FieldNotesWorkflow;
+import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
+import com.devhunter.dhdp.fieldnotes.workflow.FieldNotesWorkflow;
+import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;
-import com.devhunter.dhdp.infrastructure.DHServiceRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,20 +15,20 @@ import java.util.Map;
  * <p>
  * DHDPWorkflows are mapped to the DHDPEntity that originated the request.
  */
-public class DHDPWorkflowHandler {
+class DHDPWorkflowHandler {
     private Map<DHDPEntity, DHDPWorkflow> mWorkflowMap = new HashMap<>();
 
-    public DHDPWorkflowHandler(DHServiceRegistry registry) {
+    DHDPWorkflowHandler(DHDPServiceRegistry registry) {
         initWorkflows(registry);
     }
 
     /**
-     * retrieve workflow from mapping by originator
+     * retrieve workflow from mapping by the originator of a request
      *
      * @param header to determine originator
      * @return the workflow that will process the request
      */
-    public DHDPWorkflow getWorkflow(DHDPHeader header) {
+    DHDPWorkflow getWorkflow(DHDPHeader header) {
         // get originator from requestHeader
         DHDPEntity originator = header.getEnum(DHDPEntity.class, DHDPHeader.ORIGINATOR_KEY);
         // return the corresponding workflow
@@ -36,11 +36,12 @@ public class DHDPWorkflowHandler {
     }
 
     /**
-     * initializes all workflows with the service registry
+     * initializes all workflows. Workflows are created to be used by
+     * users of a specific DHDPEntity AKA, the sender of the request.
      *
      * @param registry containing services
      */
-    private void initWorkflows(DHServiceRegistry registry) {
-        mWorkflowMap.put(DHDPEntity.FieldNotes, new FieldNotesWorkflow(registry));
+    private void initWorkflows(DHDPServiceRegistry registry) {
+        mWorkflowMap.put(DHDPEntity.FieldNotes, new FieldNotesWorkflow("FieldNotesWorkflow", registry));
     }
 }

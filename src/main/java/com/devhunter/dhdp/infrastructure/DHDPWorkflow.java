@@ -3,14 +3,19 @@ package com.devhunter.dhdp.infrastructure;
 import com.devhunter.DHDPConnector4J.DHDPRequest;
 import com.devhunter.DHDPConnector4J.DHDPResponse;
 
+/**
+ * abstract class for a workflow.
+ * <p>
+ * All workflows will need to provide
+ * their won implementation of process(), since each client will need
+ * their data processed differently
+ */
 public abstract class DHDPWorkflow {
-    protected static final String STATUS_KEY = "STATUS";
-    protected static final String MESSAGE_KEY = "MESSAGE";
-    protected static final String TIMESTAMP_KEY = "TIMESTAMP";
-    protected static final String RESULT_KEY = "RESULT";
-    protected DHServiceRegistry mRegistry;
+    private String mName;
+    protected DHDPServiceRegistry mRegistry;
 
-    protected DHDPWorkflow(DHServiceRegistry registry) {
+    protected DHDPWorkflow(String name, DHDPServiceRegistry registry) {
+        mName = name;
         mRegistry = registry;
     }
 
@@ -21,4 +26,13 @@ public abstract class DHDPWorkflow {
      * @return response object created by the workflow
      */
     public abstract DHDPResponse process(DHDPRequest request);
+
+    /**
+     * retrieve the name of the workflow
+     *
+     * @return name of workflow
+     */
+    public String getName() {
+        return mName;
+    }
 }

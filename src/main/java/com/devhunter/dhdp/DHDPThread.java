@@ -1,10 +1,11 @@
 package com.devhunter.dhdp;
 
 import com.devhunter.DHDPConnector4J.*;
+import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
+import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
+import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;
-import com.devhunter.dhdp.infrastructure.DHServiceRegistry;
-import org.apache.commons.codec.binary.Base64;
-import org.json.JSONObject;
+import com.devhunter.dhdp.services.CodecService;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,9 +13,6 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -23,10 +21,12 @@ import java.util.logging.Logger;
 public class DHDPThread extends Thread {
     private Logger mLogger = Logger.getLogger(DHDPThread.class.getName());
     private DHDPWorkflowHandler mHandler;
+    private CodecService mCodecService;
     private Socket mSocket;
 
-    public DHDPThread(DHServiceRegistry registry, Socket clientSocket) {
-        mHandler = new DHDPWorkflowHandler(registry);
+    DHDPThread(DHDPServiceRegistry registry, DHDPWorkflowHandler handler, Socket clientSocket) {
+        mCodecService = registry.resolve(CodecService.class);
+        mHandler = handler;
         mSocket = clientSocket;
     }
 
@@ -34,7 +34,7 @@ public class DHDPThread extends Thread {
     public void run() {
         try {
             // get the request from HTTP request
-            DHDPRequest request = getJsonFromHttpRequest(mSocket);
+            DHDPRequest request = getRequest(mSocket);
             if (request != null) {
                 mLogger.info(request.toString());
 
@@ -45,9 +45,10 @@ public class DHDPThread extends Thread {
                 DHDPResponse response = workflow.process(request);
                 mLogger.info(response.toString());
 
+                // send response back to client
                 sendProcessingComplete(response);
             } else {
-                sendFailure();
+                sendProcessingFailed(request);
             }
         } catch (IOException e) {
             mLogger.info(e.toString());
@@ -55,13 +56,13 @@ public class DHDPThread extends Thread {
     }
 
     /**
-     * retrieves the JSON request from the HTTP Request
+     * retrieves the DHDPRequest from the HTTP Request
      *
      * @param clientSocket to read from
-     * @return request as a JSONObject
+     * @return request from client
      * @throws IOException if request cannot be read
      */
-    private DHDPRequest getJsonFromHttpRequest(Socket clientSocket) throws IOException {
+    private DHDPRequest getRequest(Socket clientSocket) throws IOException {
         //read the HTTP request from the client socket
         InputStreamReader isr = new InputStreamReader(clientSocket.getInputStream());
 
@@ -71,146 +72,98 @@ public class DHDPThread extends Thread {
         // read the lines until we find the POST or GET data
         String line = br.readLine();
         while (!line.isEmpty()) {
-            mLogger.log(Level.INFO, line);
+            mLogger.info(line);
             if (line.startsWith("GET") || line.startsWith("POST")) {
                 // get the encoded json string
                 line = line.substring(line.indexOf("?"), line.lastIndexOf(" "));
 
-                JSONObject request = decode(line);
-
-                //convert to DHDPRequest
-                DHDPHeader header = DHDPHeader.newBuilder()
-                        .setCreator(request.getString(DHDPHeader.CREATOR_KEY))
-                        .setRequestType(request.getEnum(DHDPRequestType.class, DHDPHeader.REQUEST_TYPE_KEY))
-                        .setOrganization(request.getEnum(DHDPOrganization.class, DHDPHeader.ORGANIZATION_KEY))
-                        .setOriginator(request.getEnum(DHDPEntity.class, DHDPHeader.ORIGINATOR_KEY))
-                        .setRecipient(request.getEnum(DHDPEntity.class, DHDPHeader.RECIPIENT_KEY))
-                        .build();
-
-                // remove header values from request
-                request.remove(DHDPHeader.CREATOR_KEY);
-                request.remove(DHDPHeader.REQUEST_TYPE_KEY);
-                request.remove(DHDPHeader.ORGANIZATION_KEY);
-                request.remove(DHDPHeader.ORIGINATOR_KEY);
-                request.remove(DHDPHeader.RECIPIENT_KEY);
-
-                // put the rest of the values in the body
-                Map<String, Object> bodyMap = new HashMap<>();
-                for (String each : request.keySet()) {
-                    bodyMap.put(each, request.get(each));
-                }
-
-                // create DHDPRequest
-                return DHDPRequest.newBuilder()
-                        .setHeader(header)
-                        .setBody(new DHDPRequestBody(bodyMap))
-                        .build();
+                // decode request
+                return mCodecService.decode(line);
             } else {
                 // get the next line
                 line = br.readLine();
             }
         }
-        mLogger.log(Level.INFO, "Rx empty HTTP Request");
+        mLogger.info("Rx empty HTTP Request");
         return null;
     }
 
+    /**
+     * sends a processed Response to the Client
+     *
+     * @param response to encode and send
+     */
     private void sendProcessingComplete(DHDPResponse response) {
         String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
         try {
             mSocket.getOutputStream().write(httpResponse.getBytes(StandardCharsets.UTF_8));
 
             // encode response
-            String encodedResult = encode(response.toString());
+            String encodedResult = mCodecService.encode(response);
             // write to client
             mSocket.getOutputStream().write(encodedResult.getBytes(StandardCharsets.UTF_8));
 
             mSocket.getOutputStream().flush();
             mSocket.getOutputStream().close();
         } catch (IOException e) {
-            mLogger.severe((e.toString()));
+            mLogger.severe(e.toString());
         }
     }
 
-    private void sendFailure() {
+    /**
+     * sends a failure response to the Cient
+     *
+     * @param request that failed to process
+     */
+    private void sendProcessingFailed(DHDPRequest request) {
         String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
         try {
             mSocket.getOutputStream().write(httpResponse.getBytes(StandardCharsets.UTF_8));
 
-            // create test response
-            JSONObject jsonResponse = new JSONObject();
-            jsonResponse.put("STATUS", "FAILURE");
-            jsonResponse.put("MESSAGE", "DHDP did not received a valid request");
-            jsonResponse.put("TIMESTAMP", LocalDateTime.now());
-            jsonResponse.put("RESULT", "no results");
-            mLogger.info("LocalDHDP Tx response: " + jsonResponse.toString());
+            DHDPResponse response = buildFailureResponse(request);
+            mLogger.info("LocalDHDP Tx response: " + response.toString());
 
-            // send test response
-            String encodedResult = encode(jsonResponse.toString());
+            // send response
+            String encodedResult = mCodecService.encode(response);
             mSocket.getOutputStream().write(encodedResult.getBytes(StandardCharsets.UTF_8));
 
             mSocket.getOutputStream().flush();
             mSocket.getOutputStream().close();
         } catch (IOException e) {
-            mLogger.severe((e.toString()));
-        }
-    }
-
-    private void sendTestResponse() {
-        // prepare test response
-        String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
-        try {
-            mSocket.getOutputStream().write(httpResponse.getBytes(StandardCharsets.UTF_8));
-
-            // create test response
-            JSONObject jsonResponse = new JSONObject();
-            jsonResponse.put("STATUS", "SUCCESS");
-            jsonResponse.put("MESSAGE", "WE DID IT");
-            jsonResponse.put("TIMESTAMP", LocalDateTime.now());
-            jsonResponse.put("RESULT", "Results are overrated");
-            mLogger.info("LocalDHDP Tx response: " + jsonResponse.toString());
-
-            // send test response
-            String encodedResult = encode(jsonResponse.toString());
-            mSocket.getOutputStream().write(encodedResult.getBytes(StandardCharsets.UTF_8));
-
-            mSocket.getOutputStream().flush();
-            mSocket.getOutputStream().close();
-        } catch (IOException e) {
-            mLogger.severe((e.toString()));
+            mLogger.severe(e.toString());
         }
     }
 
     /**
-     * Encode a String to BASE64
+     * build failure response if the Request cannot be processed
      *
-     * @param value to encode
-     * @return encoded value
+     * @param request from client
+     * @return response created from known request values
      */
-    private String encode(String value) {
-        byte[] encodedBytes = Base64.encodeBase64(value.getBytes());
-        return new String(encodedBytes);
-    }
+    private DHDPResponse buildFailureResponse(DHDPRequest request) {
+        DHDPHeader requestHeader = request.getHeader();
 
-    /**
-     * Decode a String to JSONObject
-     *
-     * @param value to decode
-     * @return decoded value
-     */
-    private JSONObject decode(String value) {
-        // decode
-        byte[] decodedBytes = Base64.decodeBase64(value);
-        // convert to JSONObject
-        return new JSONObject(new String(decodedBytes));
-    }
-
-    /**
-     * private class used to build the Request body for easy processing
-     */
-    private class DHDPRequestBody extends DHDPBody {
-
-        DHDPRequestBody(Map<String, Object> bodyMap) throws IllegalArgumentException {
-            super(bodyMap);
+        DHDPHeader.Builder headerBuilder = DHDPHeader.newBuilder();
+        if (requestHeader != null) {
+            headerBuilder.setCreator(requestHeader.getCreator())
+                    .setOrganization(requestHeader.getOrganization())
+                    .setOriginator(requestHeader.getRecipient())
+                    .setRecipient(requestHeader.getOriginator())
+                    .setRequestType(requestHeader.getRequestType());
+        } else {
+            headerBuilder.setCreator("UNKNOWN")
+                    .setOrganization(DHDPOrganization.UNKNOWN)
+                    .setOriginator(DHDPEntity.DHDP)
+                    .setRecipient(DHDPEntity.UNKNOWN)
+                    .setRequestType(DHDPRequestType.UNKNOWN);
         }
+
+        return DHDPResponse.newBuilder()
+                .setHeader(headerBuilder.build())
+                .setStatus(DHDPResponseType.FAILURE)
+                .setMessage("DHDP Did not receive  valid request")
+                .setTimestamp(LocalDateTime.now())
+                .setResults(null)
+                .build();
     }
 }
