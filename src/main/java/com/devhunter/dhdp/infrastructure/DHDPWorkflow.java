@@ -1,7 +1,7 @@
 package com.devhunter.dhdp.infrastructure;
 
-import com.devhunter.DHDPConnector4J.DHDPRequest;
-import com.devhunter.DHDPConnector4J.DHDPResponse;
+import com.devhunter.DHDPConnector4J.request.DHDPRequest;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 
 /**
  * abstract class for a workflow.
@@ -25,7 +25,7 @@ public abstract class DHDPWorkflow {
      * @param request holding the data to process
      * @return response object created by the workflow
      */
-    public abstract DHDPResponse process(DHDPRequest request);
+    public abstract DHDPResponseBody process(DHDPRequest request);
 
     /**
      * retrieve the name of the workflow

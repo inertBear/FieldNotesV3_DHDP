@@ -1,9 +1,9 @@
 package com.devhunter.dhdp;
 
-import com.devhunter.DHDPConnector4J.DHDPHeader;
-import com.devhunter.DHDPConnector4J.DHDPRequestType;
 import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
 import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
+import com.devhunter.DHDPConnector4J.header.DHDPHeader;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;

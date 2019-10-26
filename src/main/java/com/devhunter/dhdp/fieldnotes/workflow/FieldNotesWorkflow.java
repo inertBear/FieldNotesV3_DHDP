@@ -1,9 +1,11 @@
 package com.devhunter.dhdp.fieldnotes.workflow;
 
 import com.devhunter.DHDPConnector4J.*;
-import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
-import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
-import com.devhunter.dhdp.fieldnotes.model.FieldNoteResponse;
+import com.devhunter.DHDPConnector4J.header.DHDPHeader;
+import com.devhunter.DHDPConnector4J.request.DHDPRequest;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;
@@ -24,49 +26,26 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
     }
 
     @Override
-    public DHDPResponse process(DHDPRequest request) {
-        FieldNoteResponse fieldNote;
+    public DHDPResponseBody process(DHDPRequest request) {
         DHDPHeader requestHeader = request.getHeader();
-        DHDPBody body = request.getBody();
+        DHDPRequestBody body = request.getBody();
 
         // determine what the request wanted to do
-        DHDPRequestType requestType = requestHeader.getRequestType();
-        switch (requestType) {
+        switch (requestHeader.getRequestType()) {
             case LOGIN:
-                fieldNote = mService.login(body);
-                break;
+                return mService.login(body);
             case ADD:
-                fieldNote = mService.addNote(body);
-                break;
+                return mService.addNote(body);
             case DELETE:
-                fieldNote = mService.deleteNote(body);
-                break;
+                return mService.deleteNote(body);
             case SEARCH:
-                fieldNote = mService.searchNote(body);
-                break;
+                return mService.searchNote(body);
             case UPDATE:
-                fieldNote = mService.updateNote(body);
-                break;
+                return mService.updateNote(body);
             case LOGOUT:
             case REGISTER:
             default:
-                fieldNote = mService.unsupportedNote(body);
-                break;
+                return mService.unsupportedNote(requestHeader);
         }
-
-        // build Response
-        return DHDPResponse.newBuilder()
-                .setHeader(DHDPHeader.newBuilder()
-                        .setCreator(requestHeader.getString(DHDPHeader.CREATOR_KEY))
-                        .setRequestType(requestHeader.getEnum(DHDPRequestType.class, DHDPHeader.REQUEST_TYPE_KEY))
-                        .setOrganization(requestHeader.getEnum(DHDPOrganization.class, DHDPHeader.ORGANIZATION_KEY))
-                        .setOriginator(requestHeader.getEnum(DHDPEntity.class, DHDPHeader.RECIPIENT_KEY))
-                        .setRecipient(requestHeader.getEnum(DHDPEntity.class, DHDPHeader.ORIGINATOR_KEY))
-                        .build())
-                .setStatus(fieldNote.getStatus())
-                .setMessage(fieldNote.getMessage())
-                .setResults(fieldNote.getResults())
-                .setTimestamp(fieldNote.getTimestamp())
-                .build();
     }
 }

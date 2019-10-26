@@ -1,7 +1,8 @@
 package com.devhunter.dhdp.services;
 
-import com.devhunter.DHDPConnector4J.DHDPResponseType;
-import com.devhunter.dhdp.fieldnotes.model.FieldNoteResponse;
+import com.devhunter.DHDPConnector4J.response.DHDPResponse;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseType;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import org.junit.Before;
 import org.junit.Test;
@@ -10,10 +11,12 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import static com.devhunter.DHDPConnector4J.constants.FieldNotesConstants.TOKEN_KEY;
+import static com.devhunter.DHDPConnector4J.constants.fieldNotes.FieldNotesConstants.TOKEN_KEY;
 import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -56,22 +59,25 @@ public class MySqlServiceTest {
             // get result
             Map<String, String> result = new HashMap<>();
             result.put(TOKEN_KEY, resultSet.getString(TOKEN_COLUMN));
+            List<Map<String, String>> results = new ArrayList<>();
+            results.add(result);
 
             // build FNResponse
-            FieldNoteResponse fieldNoteResponse = new FieldNoteResponse();
-            fieldNoteResponse.setStatus(DHDPResponseType.SUCCESS);
-            fieldNoteResponse.setMessage(message);
-            fieldNoteResponse.setTimestamp(now);
-            fieldNoteResponse.addResults(result);
+            DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
+            responseBodyBuilder.setResponseType(DHDPResponseType.SUCCESS);
+            responseBodyBuilder.setMessage(message);
+            responseBodyBuilder.setResults(results);
+            DHDPResponse response = DHDPResponse.newBuilder()
+                    .setResponse(responseBodyBuilder.build())
+                    .build();
 
             //close connection
             mMySqlService.closeConnection(connection);
 
             // assert
-            assertEquals(DHDPResponseType.SUCCESS, fieldNoteResponse.getStatus());
-            assertEquals(message, fieldNoteResponse.getMessage());
-            assertEquals(now, fieldNoteResponse.getTimestamp());
-            assertNotNull(fieldNoteResponse.getResults());
+            assertEquals(DHDPResponseType.SUCCESS, response.getResponse().getResponseType());
+            assertEquals(message, response.getResponse().getMessage());
+            assertNotNull(response.getResponse().getResults());
         }
     }
 }

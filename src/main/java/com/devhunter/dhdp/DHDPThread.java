@@ -1,8 +1,13 @@
 package com.devhunter.dhdp;
 
-import com.devhunter.DHDPConnector4J.*;
 import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
 import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
+import com.devhunter.DHDPConnector4J.header.DHDPHeader;
+import com.devhunter.DHDPConnector4J.request.DHDPRequest;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
+import com.devhunter.DHDPConnector4J.response.DHDPResponse;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseType;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;
 import com.devhunter.dhdp.services.CodecService;
@@ -12,7 +17,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.logging.Logger;
 
 /**
@@ -36,19 +40,15 @@ public class DHDPThread extends Thread {
             // get the request from HTTP request
             DHDPRequest request = getRequest(mSocket);
             if (request != null) {
-                mLogger.info(request.toString());
-
                 // get the workflow that will process the request
                 DHDPWorkflow workflow = mHandler.getWorkflow(request.getHeader());
-
                 // process the request
-                DHDPResponse response = workflow.process(request);
-                mLogger.info(response.toString());
-
+                DHDPResponseBody responseBody = workflow.process(request);
+                DHDPResponse response = setHeader(request, responseBody);
                 // send response back to client
                 sendProcessingComplete(response);
             } else {
-                sendProcessingFailed(request);
+                sendProcessingFailed();
             }
         } catch (IOException e) {
             mLogger.info(e.toString());
@@ -72,7 +72,6 @@ public class DHDPThread extends Thread {
         // read the lines until we find the POST or GET data
         String line = br.readLine();
         while (!line.isEmpty()) {
-            mLogger.info(line);
             if (line.startsWith("GET") || line.startsWith("POST")) {
                 // get the encoded json string
                 line = line.substring(line.indexOf("?"), line.lastIndexOf(" "));
@@ -86,6 +85,21 @@ public class DHDPThread extends Thread {
         }
         mLogger.info("Rx empty HTTP Request");
         return null;
+    }
+
+    public DHDPResponse setHeader(DHDPRequest request, DHDPResponseBody responseBody) {
+        DHDPHeader requestHeader = request.getHeader();
+        // build Response Header (swap originator and recipient)
+        return DHDPResponse.newBuilder()
+                .setHeader(DHDPHeader.newBuilder()
+                        .setCreator(requestHeader.getCreator())
+                        .setRequestType(requestHeader.getRequestType())
+                        .setOrganization(requestHeader.getOrganization())
+                        .setOriginator(requestHeader.getRecipient())
+                        .setRecipient(requestHeader.getOriginator())
+                        .build())
+                .setResponse(responseBody)
+                .build();
     }
 
     /**
@@ -112,16 +126,14 @@ public class DHDPThread extends Thread {
 
     /**
      * sends a failure response to the Cient
-     *
-     * @param request that failed to process
      */
-    private void sendProcessingFailed(DHDPRequest request) {
+    private void sendProcessingFailed() {
         String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
         try {
             mSocket.getOutputStream().write(httpResponse.getBytes(StandardCharsets.UTF_8));
 
-            DHDPResponse response = buildFailureResponse(request);
-            mLogger.info("LocalDHDP Tx response: " + response.toString());
+            DHDPResponse response = buildFailureResponse();
+            mLogger.info("LocalDHDP - Tx: " + response.toString());
 
             // send response
             String encodedResult = mCodecService.encode(response);
@@ -137,33 +149,22 @@ public class DHDPThread extends Thread {
     /**
      * build failure response if the Request cannot be processed
      *
-     * @param request from client
      * @return response created from known request values
      */
-    private DHDPResponse buildFailureResponse(DHDPRequest request) {
-        DHDPHeader requestHeader = request.getHeader();
-
-        DHDPHeader.Builder headerBuilder = DHDPHeader.newBuilder();
-        if (requestHeader != null) {
-            headerBuilder.setCreator(requestHeader.getCreator())
-                    .setOrganization(requestHeader.getOrganization())
-                    .setOriginator(requestHeader.getRecipient())
-                    .setRecipient(requestHeader.getOriginator())
-                    .setRequestType(requestHeader.getRequestType());
-        } else {
-            headerBuilder.setCreator("UNKNOWN")
-                    .setOrganization(DHDPOrganization.UNKNOWN)
-                    .setOriginator(DHDPEntity.DHDP)
-                    .setRecipient(DHDPEntity.UNKNOWN)
-                    .setRequestType(DHDPRequestType.UNKNOWN);
-        }
-
+    private DHDPResponse buildFailureResponse() {
         return DHDPResponse.newBuilder()
-                .setHeader(headerBuilder.build())
-                .setStatus(DHDPResponseType.FAILURE)
-                .setMessage("DHDP Did not receive  valid request")
-                .setTimestamp(LocalDateTime.now())
-                .setResults(null)
+                .setHeader(DHDPHeader.newBuilder()
+                        .setCreator("UNKNOWN")
+                        .setOrganization(DHDPOrganization.UNKNOWN)
+                        .setOriginator(DHDPEntity.DHDP)
+                        .setRecipient(DHDPEntity.UNKNOWN)
+                        .setRequestType(DHDPRequestType.UNKNOWN)
+                        .build())
+                .setResponse(DHDPResponseBody.newBuilder()
+                        .setResponseType(DHDPResponseType.FAILURE)
+                        .setMessage("DHDP did not receive a valid request")
+                        .setResults(null)
+                        .build())
                 .build();
     }
 }

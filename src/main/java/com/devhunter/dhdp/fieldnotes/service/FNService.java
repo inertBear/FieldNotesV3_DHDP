@@ -1,7 +1,8 @@
 package com.devhunter.dhdp.fieldnotes.service;
 
-import com.devhunter.DHDPConnector4J.DHDPBody;
-import com.devhunter.dhdp.fieldnotes.model.FieldNoteResponse;
+import com.devhunter.DHDPConnector4J.header.DHDPHeader;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 
 /**
  * interface for the FieldNotes service.
@@ -15,7 +16,7 @@ public interface FNService {
      * @param body with login information
      * @return fieldNote with result status
      */
-    FieldNoteResponse login(DHDPBody body);
+    DHDPResponseBody login(DHDPRequestBody body);
 
     /**
      * adds a new note to the FieldNotes database
@@ -23,7 +24,7 @@ public interface FNService {
      * @param body with the note to add's data
      * @return fieldNote with result status
      */
-    FieldNoteResponse addNote(DHDPBody body);
+    DHDPResponseBody addNote(DHDPRequestBody body);
 
     /**
      * updates and existing note in the FieldNotes database
@@ -31,7 +32,7 @@ public interface FNService {
      * @param body with the information to update
      * @return fieldNote with result status
      */
-    FieldNoteResponse updateNote(DHDPBody body);
+    DHDPResponseBody updateNote(DHDPRequestBody body);
 
     /**
      * deletes an existing note from the FieldNotes database
@@ -39,7 +40,7 @@ public interface FNService {
      * @param body with the note to delete
      * @return fieldNote with result status
      */
-    FieldNoteResponse deleteNote(DHDPBody body);
+    DHDPResponseBody deleteNote(DHDPRequestBody body);
 
     /**
      * queries the FieldNotes database
@@ -47,13 +48,13 @@ public interface FNService {
      * @param body contains search parameters
      * @return fieldNote with search results
      */
-    FieldNoteResponse searchNote(DHDPBody body);
+    DHDPResponseBody searchNote(DHDPRequestBody body);
 
     /**
      * handles unsupported operations called by a client
      *
-     * @param body with client information
+     * @param header with client information
      * @return fieldNote with failure message
      */
-    FieldNoteResponse unsupportedNote(DHDPBody body);
+    DHDPResponseBody unsupportedNote(DHDPHeader header);
 }

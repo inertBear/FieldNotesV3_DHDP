@@ -1,7 +1,7 @@
 package com.devhunter.dhdp;
 
-import com.devhunter.DHDPConnector4J.DHDPHeader;
 import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
+import com.devhunter.DHDPConnector4J.header.DHDPHeader;
 import com.devhunter.dhdp.fieldnotes.workflow.FieldNotesWorkflow;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;
@@ -30,7 +30,7 @@ class DHDPWorkflowHandler {
      */
     DHDPWorkflow getWorkflow(DHDPHeader header) {
         // get originator from requestHeader
-        DHDPEntity originator = header.getEnum(DHDPEntity.class, DHDPHeader.ORIGINATOR_KEY);
+        DHDPEntity originator = header.getOriginator();
         // return the corresponding workflow
         return mWorkflowMap.get(originator);
     }

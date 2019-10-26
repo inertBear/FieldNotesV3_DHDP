@@ -31,12 +31,8 @@ public class DHDPServiceRegistry {
      */
     public <T extends DHDPService> void register(Class<T> klass, T service) {
         // check if class is already registered
-        if (mServiceMap.containsKey(klass)) {
-            mLogger.log(Level.INFO, klass + " - class already registered");
-            // do nothing
-        } else {
+        if (!mServiceMap.containsKey(klass)) {
             mServiceMap.put(klass, service);
-            mLogger.log(Level.INFO, klass + " - class registered");
         }
     }
 
@@ -50,7 +46,6 @@ public class DHDPServiceRegistry {
     public <T extends DHDPService> T resolve(Class<T> klass) {
         // check if name is registered
         if (mServiceMap.containsKey(klass)) {
-            mLogger.log(Level.INFO, klass + " - class resolved");
             return klass.cast(mServiceMap.get(klass));
         }
         mLogger.log(Level.SEVERE, klass + " - class not registered");

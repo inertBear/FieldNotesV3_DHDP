@@ -1,18 +1,18 @@
 package com.devhunter.dhdp;
 
-import com.devhunter.DHDPConnector4J.*;
+import com.devhunter.DHDPConnector4J.DHDPRequestService;
 import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
 import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
+import com.devhunter.DHDPConnector4J.header.DHDPHeader;
+import com.devhunter.DHDPConnector4J.request.DHDPRequest;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
+import com.devhunter.DHDPConnector4J.response.DHDPResponse;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseType;
+import com.devhunter.dhdp.testUtils.TestBody;
 import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import static com.devhunter.DHDPConnector4J.constants.FieldNotesConstants.TOKEN_KEY;
-import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.PASSWORD_TAG;
-import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.USERNAME_TAG;
+import static com.devhunter.DHDPConnector4J.constants.fieldNotes.FieldNotesConstants.*;
 import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
 
 public class DHDPTest {
 
@@ -28,10 +28,9 @@ public class DHDPTest {
         final String responseMessage = "Login Successful";
 
         // build request
-        Map<String, Object> bodyMap = new HashMap<>();
-        bodyMap.put(USERNAME_TAG, username);
-        bodyMap.put(PASSWORD_TAG, password);
-        DHDPBody body = new DHDPBody(bodyMap);
+        TestBody body = new TestBody();
+        body.put(USERNAME_KEY, username);
+        body.put(PASSWORD_KEY, password);
 
         DHDPRequest request = DHDPRequest.newBuilder()
                 .setHeader(DHDPHeader.newBuilder()
@@ -56,9 +55,8 @@ public class DHDPTest {
         assertEquals(DHDPEntity.FieldNotes, header.getRecipient());
 
         // check response body
-        assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
-        assertEquals(responseMessage, response.getMessage());
-        assertEquals(token, response.getResults().get(0).get(TOKEN_KEY));
-        assertNotNull(response.getTimestamp());
+        assertEquals(DHDPResponseType.SUCCESS, response.getResponse().getResponseType());
+        assertEquals(responseMessage, response.getResponse().getMessage());
+        assertEquals(token, response.getResponse().getResults().get(0).get(TOKEN_KEY));
     }
 }

@@ -1,10 +1,11 @@
 package com.devhunter.dhdp.fieldnotes.service;
 
-import com.devhunter.DHDPConnector4J.DHDPBody;
-import com.devhunter.DHDPConnector4J.DHDPHeader;
-import com.devhunter.DHDPConnector4J.DHDPRequestType;
-import com.devhunter.DHDPConnector4J.DHDPResponseType;
-import com.devhunter.dhdp.fieldnotes.model.FieldNoteResponse;
+import com.devhunter.DHDPConnector4J.header.DHDPHeader;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
+import com.devhunter.DHDPConnector4J.response.DHDPResponseType;
+import com.devhunter.dhdp.fieldnotes.model.FieldNote;
 import com.devhunter.dhdp.infrastructure.DHDPService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.services.MySqlService;
@@ -12,12 +13,12 @@ import com.devhunter.dhdp.services.MySqlService;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import static com.devhunter.DHDPConnector4J.constants.FieldNotesConstants.TOKEN_KEY;
+import static com.devhunter.DHDPConnector4J.constants.fieldNotes.FieldNotesConstants.*;
 import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
 
 public class FieldNoteService extends DHDPService implements FNService {
@@ -36,30 +37,31 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public FieldNoteResponse login(DHDPBody body) {
-        FieldNoteResponse fieldNoteResponse = new FieldNoteResponse();
+    public DHDPResponseBody login(DHDPRequestBody body) {
+        DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
+
+        // create internal FieldNote
+        FieldNote fieldNote = new FieldNote();
+        fieldNote.setUsername(body.getString(USERNAME_KEY));
+        fieldNote.setPassword(body.getString(PASSWORD_KEY));
 
         // ensure username was sent from client
-        String userName = body.getString(USERNAME_TAG);
+        String userName = fieldNote.getUsername();
         if (userName == null) {
             String message = "No Username";
-            mLogger.info(message);
 
-            fieldNoteResponse.setStatus(DHDPResponseType.FAILURE);
-            fieldNoteResponse.setMessage(message);
-            fieldNoteResponse.setTimestamp(LocalDateTime.now());
-            return fieldNoteResponse;
+            responseBodyBuilder.setResponseType(DHDPResponseType.FAILURE);
+            responseBodyBuilder.setMessage(message);
+            return responseBodyBuilder.build();
         }
         // ensure password was sent from client
-        String password = body.getString(PASSWORD_TAG);
+        String password = fieldNote.getPassword();
         if (password == null) {
             String message = "No Password";
-            mLogger.info(message);
 
-            fieldNoteResponse.setStatus(DHDPResponseType.FAILURE);
-            fieldNoteResponse.setMessage(message);
-            fieldNoteResponse.setTimestamp(LocalDateTime.now());
-            return fieldNoteResponse;
+            responseBodyBuilder.setResponseType(DHDPResponseType.FAILURE);
+            responseBodyBuilder.setMessage(message);
+            return responseBodyBuilder.build();
         }
 
         //make connection to database
@@ -68,10 +70,9 @@ public class FieldNoteService extends DHDPService implements FNService {
             String message = "No Connection";
             mLogger.info(message);
 
-            fieldNoteResponse.setStatus(DHDPResponseType.FAILURE);
-            fieldNoteResponse.setMessage(message);
-            fieldNoteResponse.setTimestamp(LocalDateTime.now());
-            return fieldNoteResponse;
+            responseBodyBuilder.setResponseType(DHDPResponseType.FAILURE);
+            responseBodyBuilder.setMessage(message);
+            return responseBodyBuilder.build();
         }
 
         // send login executeQuery
@@ -84,56 +85,52 @@ public class FieldNoteService extends DHDPService implements FNService {
         try {
             if (resultSet != null && resultSet.next()) {
                 String message = "Login Successful";
-                mLogger.info(message);
 
-                fieldNoteResponse.setStatus(DHDPResponseType.SUCCESS);
-                fieldNoteResponse.setMessage(message);
-                fieldNoteResponse.setTimestamp(LocalDateTime.now());
-                fieldNoteResponse.addResults(getResults(DHDPRequestType.LOGIN, resultSet));
+                responseBodyBuilder.setResponseType(DHDPResponseType.SUCCESS);
+                responseBodyBuilder.setMessage(message);
+                responseBodyBuilder.setResults(getResults(DHDPRequestType.LOGIN, resultSet));
                 mMySqlService.closeConnection(connection);
-                return fieldNoteResponse;
+                return responseBodyBuilder.build();
             }
         } catch (SQLException e) {
             mLogger.severe(e.toString());
             mMySqlService.closeConnection(connection);
         }
-        String message = "Unable to Login";
+        String message = "Login Failed";
         mLogger.warning(message);
 
-        fieldNoteResponse.setStatus(DHDPResponseType.FAILURE);
-        fieldNoteResponse.setMessage(message);
-        fieldNoteResponse.setTimestamp(LocalDateTime.now());
-        return fieldNoteResponse;
+        responseBodyBuilder.setResponseType(DHDPResponseType.FAILURE);
+        responseBodyBuilder.setMessage(message);
+        return responseBodyBuilder.build();
     }
 
     @Override
-    public FieldNoteResponse addNote(DHDPBody body) {
+    public DHDPResponseBody addNote(DHDPRequestBody body) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public FieldNoteResponse updateNote(DHDPBody body) {
+    public DHDPResponseBody updateNote(DHDPRequestBody body) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public FieldNoteResponse deleteNote(DHDPBody body) {
+    public DHDPResponseBody deleteNote(DHDPRequestBody body) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public FieldNoteResponse searchNote(DHDPBody body) {
+    public DHDPResponseBody searchNote(DHDPRequestBody body) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public FieldNoteResponse unsupportedNote(DHDPBody body) {
-        FieldNoteResponse fieldNoteResponse = new FieldNoteResponse();
-        fieldNoteResponse.setStatus(DHDPResponseType.FAILURE);
-        fieldNoteResponse.setMessage("Unsupported RequestType: " + body.get(DHDPHeader.REQUEST_TYPE_KEY));
-        fieldNoteResponse.setTimestamp(LocalDateTime.now());
-        fieldNoteResponse.addResults(null);
-        return fieldNoteResponse;
+    public DHDPResponseBody unsupportedNote(DHDPHeader header) {
+        DHDPResponseBody.Builder response = DHDPResponseBody.newBuilder();
+        response.setResponseType(DHDPResponseType.FAILURE);
+        response.setMessage("Unsupported RequestType: " + header.getRequestType());
+        response.setResults(null);
+        return response.build();
     }
 
     /**
@@ -144,14 +141,17 @@ public class FieldNoteService extends DHDPService implements FNService {
      * @return a map of the results
      * @throws SQLException if the results cannot be retrieved
      */
-    private Map<String, String> getResults(DHDPRequestType requestType, ResultSet resultSet)
+    private ArrayList<Map<String, String>> getResults(DHDPRequestType requestType, ResultSet resultSet)
             throws SQLException {
+        ArrayList<Map<String, String>> results = new ArrayList<>();
         Map<String, String> resultMap = new HashMap<>();
         //build results from result set
         if (requestType.equals(DHDPRequestType.LOGIN)) {
             // result is login token
             resultMap.put(TOKEN_KEY, resultSet.getString(TOKEN_COLUMN));
         }
-        return resultMap;
+
+        results.add(resultMap);
+        return results;
     }
 }
