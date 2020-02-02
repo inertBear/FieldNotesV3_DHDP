@@ -1,7 +1,5 @@
 package com.devhunter.dhdp.services;
 
-import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
-import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
 import com.devhunter.DHDPConnector4J.header.DHDPHeader;
 import com.devhunter.DHDPConnector4J.request.DHDPRequest;
 import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
@@ -38,9 +36,9 @@ public class CodecServiceTest {
     public void decodeTest() {
         String creator = "unit test";
         DHDPRequestType requestType = DHDPRequestType.UNKNOWN;
-        DHDPOrganization organization = DHDPOrganization.UNKNOWN;
-        DHDPEntity originator = DHDPEntity.UNKNOWN;
-        DHDPEntity recipient = DHDPEntity.DHDP;
+        String organization = "UNKNOWN";
+        String originator = "UNKNOWN";
+        String recipient = "DHDP";
 
         String KEY_1 = "Key1";
         String KEY_2 = "Key2";
@@ -90,9 +88,9 @@ public class CodecServiceTest {
     public void encodeTest() {
         String creator = "unit test";
         DHDPRequestType requestType = DHDPRequestType.UNKNOWN;
-        DHDPOrganization organization = DHDPOrganization.UNKNOWN;
-        DHDPEntity originator = DHDPEntity.UNKNOWN;
-        DHDPEntity recipient = DHDPEntity.DHDP;
+        String organization = "UNKNOWN";
+        String originator = "UNKNOWN";
+        String recipient = "DHDP";
         DHDPResponseType RESPONSE_TYPE = DHDPResponseType.SUCCESS;
         String MESSAGE = "response encoded";
         LocalDateTime now = LocalDateTime.now();

@@ -1,7 +1,5 @@
 package com.devhunter.dhdp;
 
-import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
-import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
 import com.devhunter.DHDPConnector4J.header.DHDPHeader;
 import com.devhunter.DHDPConnector4J.request.DHDPRequest;
 import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
@@ -43,12 +41,16 @@ public class DHDPThread extends Thread {
                 // get the workflow that will process the request
                 DHDPWorkflow workflow = mHandler.getWorkflow(request.getHeader());
                 // process the request
-                DHDPResponseBody responseBody = workflow.process(request);
-                DHDPResponse response = setHeader(request, responseBody);
-                // send response back to client
-                sendProcessingComplete(response);
+                if (workflow != null) {
+                    DHDPResponseBody responseBody = workflow.process(request);
+                    DHDPResponse response = setHeader(request, responseBody);
+                    // send response back to client
+                    sendProcessingComplete(response);
+                } else {
+                    sendProcessingFailed("Invalid Originator");
+                }
             } else {
-                sendProcessingFailed();
+                sendProcessingFailed("Invalid Request");
             }
         } catch (IOException e) {
             mLogger.info(e.toString());
@@ -127,13 +129,12 @@ public class DHDPThread extends Thread {
     /**
      * sends a failure response to the Cient
      */
-    private void sendProcessingFailed() {
+    private void sendProcessingFailed(String message) {
         String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
         try {
             mSocket.getOutputStream().write(httpResponse.getBytes(StandardCharsets.UTF_8));
 
-            DHDPResponse response = buildFailureResponse();
-            mLogger.info("LocalDHDP - Tx: " + response.toString());
+            DHDPResponse response = buildFailureResponse(message);
 
             // send response
             String encodedResult = mCodecService.encode(response);
@@ -151,18 +152,21 @@ public class DHDPThread extends Thread {
      *
      * @return response created from known request values
      */
-    private DHDPResponse buildFailureResponse() {
+    private DHDPResponse buildFailureResponse(String message) {
+        String unknownString = "UNKNOWN";
+        String messageTemplate = "Unable to process request: ";
+
         return DHDPResponse.newBuilder()
                 .setHeader(DHDPHeader.newBuilder()
-                        .setCreator("UNKNOWN")
-                        .setOrganization(DHDPOrganization.UNKNOWN)
-                        .setOriginator(DHDPEntity.DHDP)
-                        .setRecipient(DHDPEntity.UNKNOWN)
+                        .setCreator(unknownString)
+                        .setOrganization(unknownString)
+                        .setOriginator(unknownString)
+                        .setRecipient(unknownString)
                         .setRequestType(DHDPRequestType.UNKNOWN)
                         .build())
                 .setResponse(DHDPResponseBody.newBuilder()
                         .setResponseType(DHDPResponseType.FAILURE)
-                        .setMessage("DHDP did not receive a valid request")
+                        .setMessage(messageTemplate + message)
                         .setResults(null)
                         .build())
                 .build();

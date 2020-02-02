@@ -1,6 +1,7 @@
 package com.devhunter.dhdp;
 
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
+import com.devhunter.dhdp.fieldnotes.service.FieldNoteValidationService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.services.CodecService;
 import com.devhunter.dhdp.services.MySqlService;
@@ -32,10 +33,17 @@ public class Main {
         // Register services on startup
         DHDPServiceRegistry registry = new DHDPServiceRegistry();
         // each service is created with the registry, so it can register itself
-        // create DHDP services
+
+        /*
+         *  DHDP SERVICES - services used by all of DHDP
+         */
         CodecService.initService(registry);
         MySqlService.initService(registry);
-        // create client services
+
+        /*
+         *  FIELDNOTE SERVICES - services used by FN only
+         */
+        FieldNoteValidationService.initService(registry);
         FieldNoteService.initService(registry);
 
         // Create the Workflow handler
@@ -55,6 +63,7 @@ public class Main {
             }
         } catch (IOException e) {
             mLogger.severe("Caught ServerSocketException");
+            mLogger.info(e.toString());
         }
     }
 }

@@ -6,6 +6,8 @@ import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import java.sql.*;
 import java.util.logging.Logger;
 
+import static com.devhunter.dhdp.infrastructure.DHDPConstants.MYSQL_SERVICE_NAME;
+
 /**
  * Makes connections to a MySQL database and preforms CRUD operations
  * Concerning Unit testing - this can't be tested in isolation without
@@ -23,7 +25,7 @@ public class MySqlService extends DHDPService {
 
     public static void initService(DHDPServiceRegistry registry) {
         if (!registry.containsService(MySqlService.class)) {
-            registry.register(MySqlService.class, new MySqlService("MySqlService"));
+            registry.register(MySqlService.class, new MySqlService(MYSQL_SERVICE_NAME));
         }
     }
 
@@ -63,10 +65,10 @@ public class MySqlService extends DHDPService {
     }
 
     /**
-     * sends a executeQuery to the connected database
+     * sends a SELECT statement to the connected database
      *
      * @param connection to send executeQuery with
-     * @param query      to be executed on connected database
+     * @param query      to be queried on connected database
      */
     public ResultSet executeQuery(Connection connection, String query) {
         try {
@@ -76,6 +78,23 @@ public class MySqlService extends DHDPService {
             mLogger.severe(e.toString());
         }
         return null;
+    }
+
+    /**
+     * send an INSERT, UPDATE, or DELETE statement to the connected database
+     *
+     * @param connection to send executeQuery with
+     * @param query      to be updated on connected database
+     * @return the number of rows affected by the update
+     */
+    public int executeUpdate(Connection connection, String query) {
+        try {
+            Statement smt = connection.createStatement();
+            return smt.executeUpdate(query);
+        } catch (SQLException e) {
+            mLogger.severe(e.toString());
+        }
+        return 0;
     }
 
     /**

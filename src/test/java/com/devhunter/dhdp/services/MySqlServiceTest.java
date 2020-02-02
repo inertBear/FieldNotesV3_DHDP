@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.devhunter.DHDPConnector4J.constants.fieldNotes.FieldNotesConstants.TOKEN_KEY;
 import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertNotNull;

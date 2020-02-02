@@ -1,8 +1,6 @@
 package com.devhunter.dhdp;
 
 import com.devhunter.DHDPConnector4J.DHDPRequestService;
-import com.devhunter.DHDPConnector4J.groups.DHDPEntity;
-import com.devhunter.DHDPConnector4J.groups.DHDPOrganization;
 import com.devhunter.DHDPConnector4J.header.DHDPHeader;
 import com.devhunter.DHDPConnector4J.request.DHDPRequest;
 import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
@@ -11,7 +9,10 @@ import com.devhunter.DHDPConnector4J.response.DHDPResponseType;
 import com.devhunter.dhdp.testUtils.TestBody;
 import org.junit.Test;
 
-import static com.devhunter.DHDPConnector4J.constants.fieldNotes.FieldNotesConstants.*;
+import static com.devhunter.dhdp.dhdpconnector.DhdpConnectorConstants.UNIT_TEST_CREATOR;
+import static com.devhunter.dhdp.dhdpconnector.DhdpConnectorConstants.UNIT_TEST_ORGANIZATION;
+import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
+import static com.devhunter.dhdp.infrastructure.DHDPConstants.DHDP_NAME;
 import static junit.framework.TestCase.assertEquals;
 
 public class DHDPTest {
@@ -21,7 +22,6 @@ public class DHDPTest {
      */
     @Test
     public void testDHDP() {
-        final String creator = "Unit Test";
         final String username = "keithh";
         final String password = "hunterk";
         final String token = "1159616266";
@@ -34,11 +34,11 @@ public class DHDPTest {
 
         DHDPRequest request = DHDPRequest.newBuilder()
                 .setHeader(DHDPHeader.newBuilder()
-                        .setCreator(creator)
-                        .setOrganization(DHDPOrganization.DEVHUNTER)
+                        .setCreator(UNIT_TEST_CREATOR)
+                        .setOrganization(UNIT_TEST_ORGANIZATION)
                         .setRequestType(DHDPRequestType.LOGIN)
-                        .setOriginator(DHDPEntity.FieldNotes)
-                        .setRecipient(DHDPEntity.DHDP)
+                        .setOriginator(FIELDNOTES_SERVICE_NAME)
+                        .setRecipient(DHDP_NAME)
                         .build())
                 .setBody(body)
                 .build();
@@ -48,11 +48,11 @@ public class DHDPTest {
 
         // check response header
         DHDPHeader header = response.getHeader();
-        assertEquals(creator, header.getCreator());
-        assertEquals(DHDPOrganization.DEVHUNTER, header.getOrganization());
+        assertEquals(UNIT_TEST_CREATOR, header.getCreator());
+        assertEquals(UNIT_TEST_ORGANIZATION, header.getOrganization());
         assertEquals(DHDPRequestType.LOGIN, header.getRequestType());
-        assertEquals(DHDPEntity.DHDP, header.getOriginator());
-        assertEquals(DHDPEntity.FieldNotes, header.getRecipient());
+        assertEquals(DHDP_NAME, header.getOriginator());
+        assertEquals(FIELDNOTES_SERVICE_NAME, header.getRecipient());
 
         // check response body
         assertEquals(DHDPResponseType.SUCCESS, response.getResponse().getResponseType());
