@@ -58,6 +58,9 @@ public class DHDPServiceRegistryTest {
 
     /**
      * test to resolve an unregistered service
+     * <p>
+     * // NOTE: This test is excepted to display the severe log message:
+     * "class DHDPDummyService - class not registered"
      */
     @Test
     public void resolveUnregisteredTestService() {

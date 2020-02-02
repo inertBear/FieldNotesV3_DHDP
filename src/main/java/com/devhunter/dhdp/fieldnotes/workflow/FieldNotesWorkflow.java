@@ -9,6 +9,9 @@ import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
 
 /**
@@ -30,17 +33,11 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
     public DHDPResponseBody process(DHDPRequest request) {
         DHDPHeader requestHeader = request.getHeader();
         DHDPRequestBody body = request.getBody();
-        // get token
-        String token = body.getString(TOKEN_KEY);
 
         // determine what the request wanted to do
         switch (requestHeader.getRequestType()) {
             case LOGIN:
-                // get login credentials
-                String username = body.getString(USERNAME_KEY);
-                String password = body.getString(PASSWORD_KEY);
-
-                return mService.login(username, password);
+                return mService.login(body.getString(USERNAME_KEY), body.getString(PASSWORD_KEY));
             case ADD:
                 // create FieldNote to add
                 FieldNote fieldNote = FieldNote.newBuilder()
@@ -49,24 +46,40 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
                         .setWellname(body.getString(WELLNAME_KEY))
                         .setLocation(body.getString(LOCATION_KEY))
                         .setBillingType(body.getString(BILLING_KEY))
-                        .setDateStart(body.getLDT(START_DATETIME_KEY))
-                        .setDateEnd(body.getLDT(END_DATETIME_KEY))
+                        .setStartTimestamp(body.getLDT(START_DATETIME_KEY))
+                        .setEndTimestamp(body.getLDT(END_DATETIME_KEY))
                         .setMileageStart(body.getInt(START_MILEAGE_KEY))
                         .setMileageEnd(body.getInt(END_MILEAGE_KEY))
                         .setDescription(body.getString(DESCRIPTION))
                         .setGPSCoords(body.getGpsCoord(GPS))
                         .build();
 
-                return mService.addNote(token, fieldNote);
+                return mService.addNote(body.getString(TOKEN_KEY), fieldNote);
             case DELETE:
-                // get ticket number to delete
-                int ticketNumber = body.getInt(TICKET_NUMBER_KEY);
-
-                return mService.deleteNote(token, ticketNumber);
+                return mService.deleteNote(body.getString(TOKEN_KEY), body.getInt(TICKET_NUMBER_KEY));
             case SEARCH:
-                return mService.searchNote(body);
+                // get search params
+                List<Object> searchParams = new ArrayList<>();
+
+                return mService.searchNote(body.getString(TOKEN_KEY), searchParams);
             case UPDATE:
-                return mService.updateNote(body);
+                // create fieldnote to update to
+                fieldNote = FieldNote.newBuilder()
+                        .setUsername(body.getString(USERNAME_KEY))
+                        .setProject(body.getString(PROJECT_KEY))
+                        .setWellname(body.getString(WELLNAME_KEY))
+                        .setLocation(body.getString(LOCATION_KEY))
+                        .setBillingType(body.getString(BILLING_KEY))
+                        .setStartTimestamp(body.getLDT(START_DATETIME_KEY))
+                        .setEndTimestamp(body.getLDT(END_DATETIME_KEY))
+                        .setMileageStart(body.getInt(START_MILEAGE_KEY))
+                        .setMileageEnd(body.getInt(END_MILEAGE_KEY))
+                        .setDescription(body.getString(DESCRIPTION))
+                        .setGPSCoords(body.getGpsCoord(GPS))
+                        .build();
+
+                return mService.updateNote(body.getString(TOKEN_KEY),
+                        body.getInt(TICKET_NUMBER_KEY), fieldNote);
             case LOGOUT:
             case REGISTER:
             default:

@@ -1,9 +1,10 @@
 package com.devhunter.dhdp.fieldnotes.service;
 
 import com.devhunter.DHDPConnector4J.header.DHDPHeader;
-import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
 import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 import com.devhunter.dhdp.fieldnotes.model.FieldNote;
+
+import java.util.List;
 
 /**
  * interface for the FieldNotes service.
@@ -16,7 +17,7 @@ public interface FNService {
      *
      * @param username to log in with
      * @param password to log in with
-     * @return fieldNote with result status
+     * @return response message
      */
     DHDPResponseBody login(String username, String password);
 
@@ -25,40 +26,51 @@ public interface FNService {
      *
      * @param token     token the user users authenticate the new ticket
      * @param fieldNote with the FieldNote to add
-     * @return fieldNote with result status
+     * @return response message
      */
     DHDPResponseBody addNote(String token, FieldNote fieldNote);
 
     /**
      * updates and existing note in the FieldNotes database
      *
-     * @param body with the information to update
-     * @return fieldNote with result status
+     * @param token        token the user users authenticate the new ticket
+     * @param ticketNumber to update
+     * @param fieldNote    containing the data to update to
+     * @return response message
      */
-    DHDPResponseBody updateNote(DHDPRequestBody body);
+    DHDPResponseBody updateNote(String token, int ticketNumber, FieldNote fieldNote);
 
     /**
      * deletes an existing note from the FieldNotes database
      *
      * @param token        the user users authenticate the new ticket
      * @param ticketNumber to delete
-     * @return result status
+     * @return response message
      */
     DHDPResponseBody deleteNote(String token, int ticketNumber);
 
     /**
      * queries the FieldNotes database
      *
-     * @param body contains search parameters
-     * @return fieldNote with search results
+     * @param token            the user users authenticate the new ticket
+     * @param searchParameters to filter search results
+     * @return response message
      */
-    DHDPResponseBody searchNote(DHDPRequestBody body);
+    DHDPResponseBody searchNote(String token, List<Object> searchParameters);
 
     /**
-     * handles unsupported operations called by a client
+     * handles unsupported operations sent from a client
      *
      * @param header with client information
-     * @return fieldNote with failure message
+     * @return response message
      */
     DHDPResponseBody unsupportedNote(DHDPHeader header);
+
+    /**
+     * handles malformed request from a client
+     *
+     * @param message to send to client
+     * @return response message
+     */
+    DHDPResponseBody malformedNote(String message);
 }

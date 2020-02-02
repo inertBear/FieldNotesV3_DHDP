@@ -64,7 +64,7 @@ public class FieldNote extends DHDPRequestBody {
         return mGps;
     }
 
-    public String getBilling() {
+    public String getBillingType() {
         return mBilling;
     }
 
@@ -133,12 +133,12 @@ public class FieldNote extends DHDPRequestBody {
             return this;
         }
 
-        public Builder setDateStart(LocalDateTime startTimestamp) {
+        public Builder setStartTimestamp(LocalDateTime startTimestamp) {
             this.startTimeStamp = startTimestamp;
             return this;
         }
 
-        public Builder setDateEnd(LocalDateTime endTimestamp) {
+        public Builder setEndTimestamp(LocalDateTime endTimestamp) {
             this.endTimeStamp = endTimestamp;
             return this;
         }

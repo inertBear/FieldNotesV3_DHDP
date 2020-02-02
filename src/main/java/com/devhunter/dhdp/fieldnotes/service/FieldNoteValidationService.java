@@ -85,7 +85,7 @@ public class FieldNoteValidationService extends DHDPService {
         }
 
         // ensure billing type was sent from client
-        String billing = fieldNote.getBilling();
+        String billing = fieldNote.getBillingType();
         if (billing == null || billing.isEmpty()) {
             throw new IllegalArgumentException(messageTemplate + "Billing Type");
         } else {
@@ -113,5 +113,10 @@ public class FieldNoteValidationService extends DHDPService {
         if (description == null || description.isEmpty()) {
             throw new IllegalArgumentException(messageTemplate + "Description");
         }
+    }
+
+    public void validateUpdateNote(FieldNote fieldNote) {
+        // TODO: is this needed??
+        // at least 1 value must be present, otherwise - no update
     }
 }

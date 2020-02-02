@@ -1,7 +1,7 @@
 package com.devhunter.dhdp.fieldnotes.service;
 
 import com.devhunter.DHDPConnector4J.model.GpsCoord;
-import com.devhunter.DHDPConnector4J.response.DHDPResponse;
+import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
 import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 import com.devhunter.DHDPConnector4J.response.DHDPResponseType;
 import com.devhunter.dhdp.fieldnotes.model.FieldNote;
@@ -57,8 +57,8 @@ public class FieldNoteServiceTest {
                 .setWellname("Test WellName")
                 .setLocation("Office")
                 .setBillingType("Not Billable")
-                .setDateStart(LocalDateTime.now())
-                .setDateEnd(LocalDateTime.now())
+                .setStartTimestamp(LocalDateTime.now())
+                .setEndTimestamp(LocalDateTime.now())
                 .setMileageStart(1)
                 .setMileageEnd(2)
                 .setDescription("Test Description")
@@ -87,7 +87,7 @@ public class FieldNoteServiceTest {
      * Test FieldNotes service add note
      */
     @Test
-    public void testAddAndDeleteNoteWithoutGps() {
+    public void testAddUpdateAndDeleteNoteWithoutGps() {
         String token = "1159616266";
         // create new FieldNote
         FieldNote fn = FieldNote.newBuilder()
@@ -96,8 +96,8 @@ public class FieldNoteServiceTest {
                 .setWellname("Test WellName")
                 .setLocation("Office")
                 .setBillingType("Not Billable")
-                .setDateStart(LocalDateTime.now())
-                .setDateEnd(LocalDateTime.now())
+                .setStartTimestamp(LocalDateTime.now())
+                .setEndTimestamp(LocalDateTime.now())
                 .setMileageStart(1)
                 .setMileageEnd(2)
                 .setDescription("Test Description")
@@ -107,10 +107,26 @@ public class FieldNoteServiceTest {
         DHDPResponseBody response = mFieldNoteService.addNote(token, fn);
         assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
         assertEquals("Add Successful", response.getMessage());
-        assertNotNull(response.getResults().get(0).get(TICKET_NUMBER_KEY));
+        String addedTicketNumberString = response.getResults().get(0).get(TICKET_NUMBER_KEY);
+        assertNotNull(addedTicketNumberString);
+
+        // get added ticket number
+        int addedTicketNumber = Integer.parseInt(addedTicketNumberString);
+
+        //use FNService to updateNote
+        response = mFieldNoteService.updateNote(token, addedTicketNumber, fn);
+        assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
+        assertEquals("Update Successful", response.getMessage());
+        String updatedTicketNumberString = response.getResults().get(0).get(TICKET_NUMBER_KEY);
+        assertNotNull(updatedTicketNumberString);
+
+        // get updated ticket number
+        int updatedTicketNumber = Integer.parseInt(addedTicketNumberString);
+
+        assertEquals(addedTicketNumber, updatedTicketNumber);
 
         // delete note added from unit test
-        response = mFieldNoteService.deleteNote(token, Integer.parseInt(response.getResults().get(0).get(TICKET_NUMBER_KEY)));
+        response = mFieldNoteService.deleteNote(token, updatedTicketNumber);
         assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
         assertEquals("Delete Successful", response.getMessage());
         assertEquals("1", response.getResults().get(0).get(NUMBER_AFFECTED_ROWS_KEY));

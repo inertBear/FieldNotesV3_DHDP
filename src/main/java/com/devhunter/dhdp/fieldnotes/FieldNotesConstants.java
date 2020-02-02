@@ -62,5 +62,4 @@ public class FieldNotesConstants {
     // Field restricted fields
     public static final String[] LOCATION_VALUES = {"Office", "Shop", "Field"};
     public static final String[] BILLING_VALUES = {"Billable", "Not Billable", "Turn-key"};
-
 }
