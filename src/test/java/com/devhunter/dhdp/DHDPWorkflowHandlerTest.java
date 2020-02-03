@@ -2,6 +2,7 @@ package com.devhunter.dhdp;
 
 import com.devhunter.DHDPConnector4J.header.DHDPHeader;
 import com.devhunter.DHDPConnector4J.request.DHDPRequestType;
+import com.devhunter.dhdp.fieldnotes.service.FieldNoteQueryService;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteValidationService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
@@ -26,6 +27,7 @@ public class DHDPWorkflowHandlerTest {
         DHDPServiceRegistry registry = new DHDPServiceRegistry();
         MySqlService.initService(registry);
         FieldNoteValidationService.initService(registry);
+        FieldNoteQueryService.initService(registry);
         FieldNoteService.initService(registry);
         DHDPWorkflowHandler handler = new DHDPWorkflowHandler(registry);
 

@@ -17,6 +17,7 @@ public class FieldNoteValidationServiceTest {
         DHDPServiceRegistry registry = new DHDPServiceRegistry();
         MySqlService.initService(registry);
         FieldNoteValidationService.initService(registry);
+        FieldNoteQueryService.initService(registry);
         FieldNoteService.initService(registry);
         mService = registry.resolve(FieldNoteValidationService.class);
     }

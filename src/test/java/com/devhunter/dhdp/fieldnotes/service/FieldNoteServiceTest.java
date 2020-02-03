@@ -12,9 +12,13 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
 import static junit.framework.TestCase.assertNotNull;
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -26,6 +30,7 @@ public class FieldNoteServiceTest {
         DHDPServiceRegistry registry = new DHDPServiceRegistry();
         MySqlService.initService(registry);
         FieldNoteValidationService.initService(registry);
+        FieldNoteQueryService.initService(registry);
         FieldNoteService.initService(registry);
         mFieldNoteService = registry.resolve(FieldNoteService.class);
     }
@@ -36,7 +41,7 @@ public class FieldNoteServiceTest {
     @Test
     public void testLogin() {
         // use the FNService to login
-        DHDPResponseBody response = mFieldNoteService.login("keithh", "hunterk");
+        DHDPResponseBody response = mFieldNoteService.login("Unit Test", "fnunittest");
 
         // process a successful login
         assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
@@ -77,7 +82,7 @@ public class FieldNoteServiceTest {
         assertNotNull(response.getResults().get(0).get(TICKET_NUMBER_KEY));
 
         // delete note added from unit test
-        response = mFieldNoteService.deleteNote(token, Integer.parseInt(response.getResults().get(0).get(TICKET_NUMBER_KEY)));
+        response = mFieldNoteService.deleteNote(token, Integer.parseInt(response.getResults().get(0).get(TICKET_NUMBER_KEY).toString()));
         assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
         assertEquals("Delete Successful", response.getMessage());
         assertEquals("1", response.getResults().get(0).get(NUMBER_AFFECTED_ROWS_KEY));
@@ -87,7 +92,7 @@ public class FieldNoteServiceTest {
      * Test FieldNotes service add note
      */
     @Test
-    public void testAddUpdateAndDeleteNoteWithoutGps() {
+    public void testAddUpdateSearchAndDeleteNoteWithoutGps() {
         String token = "1159616266";
         // create new FieldNote
         FieldNote fn = FieldNote.newBuilder()
@@ -103,29 +108,44 @@ public class FieldNoteServiceTest {
                 .setDescription("Test Description")
                 .build();
 
-        // use the FNService to addNote
+        // ADD
         DHDPResponseBody response = mFieldNoteService.addNote(token, fn);
         assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
         assertEquals("Add Successful", response.getMessage());
-        String addedTicketNumberString = response.getResults().get(0).get(TICKET_NUMBER_KEY);
+        String addedTicketNumberString = response.getResults().get(0).get(TICKET_NUMBER_KEY).toString();
         assertNotNull(addedTicketNumberString);
 
         // get added ticket number
         int addedTicketNumber = Integer.parseInt(addedTicketNumberString);
 
-        //use FNService to updateNote
+        // UPDATE
         response = mFieldNoteService.updateNote(token, addedTicketNumber, fn);
         assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
         assertEquals("Update Successful", response.getMessage());
-        String updatedTicketNumberString = response.getResults().get(0).get(TICKET_NUMBER_KEY);
+        String updatedTicketNumberString = response.getResults().get(0).get(TICKET_NUMBER_KEY).toString();
         assertNotNull(updatedTicketNumberString);
 
         // get updated ticket number
         int updatedTicketNumber = Integer.parseInt(addedTicketNumberString);
-
         assertEquals(addedTicketNumber, updatedTicketNumber);
 
-        // delete note added from unit test
+        Map<String, Object> searchParams = new LinkedHashMap<>();
+        searchParams.put(TICKET_NUMBER_KEY, updatedTicketNumber);
+
+        // SEARCH (by ticketNumber)
+        response = mFieldNoteService.searchNote(token, searchParams);
+        assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
+        assertEquals("Search Successful", response.getMessage());
+        List<Map<String, Object>> results = response.getResults();
+        // RX one result
+        assertEquals(1, results.size());
+        Map<String, Object> resultMap = results.get(0);
+        // key is ticket number
+        assertTrue(resultMap.containsKey(String.valueOf(updatedTicketNumber)));
+        // value is fn
+        assertEquals(fn, resultMap.get(String.valueOf(updatedTicketNumber)));
+
+        // DELETE
         response = mFieldNoteService.deleteNote(token, updatedTicketNumber);
         assertEquals(DHDPResponseType.SUCCESS, response.getResponseType());
         assertEquals("Delete Successful", response.getMessage());

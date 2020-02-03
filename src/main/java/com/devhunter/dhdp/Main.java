@@ -1,5 +1,6 @@
 package com.devhunter.dhdp;
 
+import com.devhunter.dhdp.fieldnotes.service.FieldNoteQueryService;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteValidationService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
@@ -44,6 +45,7 @@ public class Main {
          *  FIELDNOTE SERVICES - services used by FN only
          */
         FieldNoteValidationService.initService(registry);
+        FieldNoteQueryService.initService(registry);
         FieldNoteService.initService(registry);
 
         // Create the Workflow handler

@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -27,11 +26,13 @@ public class FieldNoteService extends DHDPService implements FNService {
     private static Logger mLogger = Logger.getLogger(FieldNoteService.class.getName());
     private MySqlService mMySqlService;
     private FieldNoteValidationService mValidationService;
+    private FieldNoteQueryService mQueryService;
 
     private FieldNoteService(String name, DHDPServiceRegistry registry) {
         super(name);
         mMySqlService = registry.resolve(MySqlService.class);
         mValidationService = registry.resolve(FieldNoteValidationService.class);
+        mQueryService = registry.resolve(FieldNoteQueryService.class);
     }
 
     public static void initService(DHDPServiceRegistry registry) {
@@ -187,8 +188,8 @@ public class FieldNoteService extends DHDPService implements FNService {
                 }
 
                 // build results (using num_of_affected_rows)
-                ArrayList<Map<String, String>> results = new ArrayList<>();
-                Map<String, String> result = new HashMap<>();
+                ArrayList<Map<String, Object>> results = new ArrayList<>();
+                Map<String, Object> result = new HashMap<>();
                 result.put(NUMBER_AFFECTED_ROWS_KEY, String.valueOf(numAlteredRows));
                 results.add(result);
 
@@ -285,8 +286,8 @@ public class FieldNoteService extends DHDPService implements FNService {
                 message = "Update Successful";
 
                 // build results (using ticketNumber)
-                ArrayList<Map<String, String>> results = new ArrayList<>();
-                Map<String, String> result = new HashMap<>();
+                ArrayList<Map<String, Object>> results = new ArrayList<>();
+                Map<String, Object> result = new HashMap<>();
                 result.put(TICKET_NUMBER_KEY, String.valueOf(ticketNumber));
                 results.add(result);
 
@@ -333,12 +334,12 @@ public class FieldNoteService extends DHDPService implements FNService {
             if (numDeletedRows > 0) {
                 message = "Delete Successful";
             } else {
-                message = "Ticket does not exists";
+                message = "Ticket does not exist";
             }
 
             // build results (number of tickets deleted)
-            ArrayList<Map<String, String>> results = new ArrayList<>();
-            Map<String, String> result = new HashMap<>();
+            ArrayList<Map<String, Object>> results = new ArrayList<>();
+            Map<String, Object> result = new HashMap<>();
             result.put(NUMBER_AFFECTED_ROWS_KEY, String.valueOf(numDeletedRows));
             results.add(result);
 
@@ -353,8 +354,88 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody searchNote(String token, List<Object> searchParameters) {
-        throw new UnsupportedOperationException();
+    public DHDPResponseBody searchNote(String token, Map<String, Object> searchParameters) {
+        DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
+
+        String searchTable = "Data_" + token;
+        String searchQuery = mQueryService.buildSearchQuery(searchTable, searchParameters);
+
+        // make connection to database
+        Connection connection = mMySqlService.getAwsConnection(DB_SERVER, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD);
+        if (connection == null) {
+            String message = "No Connection";
+            mLogger.info(message);
+
+            responseBodyBuilder.setResponseType(DHDPResponseType.FAILURE);
+            responseBodyBuilder.setMessage(message);
+            return responseBodyBuilder.build();
+        }
+
+        ResultSet resultSet = mMySqlService.executeQuery(connection, searchQuery);
+
+        try {
+            // build results (search results - as fieldnotes)
+            ArrayList<Map<String, Object>> results = new ArrayList<>();
+            Map<String, Object> result = new HashMap<>();
+
+            while (resultSet.next()) {
+                // create FieldNote from search results
+                String dateStartString = resultSet.getString(DATE_START_COLUMN);
+                String timeStartString = resultSet.getString(TIME_START_COLUMN);
+                mLogger.info(dateStartString + "T" + timeStartString);
+                LocalDateTime startTimeStamp = LocalDateTime.parse(dateStartString + "T" + timeStartString);
+
+                //TODO: somehow the time and date columns are reversed.... look into this
+//                String dateEndString = resultSet.getString(DATE_END_COLUMN);
+//                String timeEndString = resultSet.getString(TIME_END_COLUMN);
+                String dateEndString = resultSet.getString(TIME_END_COLUMN);
+                String timeEndString = resultSet.getString(DATE_END_COLUMN);
+                mLogger.info(dateEndString + "T" + timeEndString);
+                LocalDateTime endTimeStamp = LocalDateTime.parse(dateEndString + "T" + timeEndString);
+
+                GpsCoord gps = null;
+                String gpsString = resultSet.getString(GPS_COLUMN);
+                if (!gpsString.equals("Not Provided")) {
+                    gps = GpsCoord.newBuilder()
+                            .setLatitude(Double.parseDouble(gpsString.substring(0, gpsString.indexOf(","))))
+                            .setLongitude(Double.parseDouble(gpsString.substring(gpsString.indexOf("," + 2))))
+                            .build();
+                }
+
+                result.put(resultSet.getString(TICKET_NUMBER_COLUMN), FieldNote.newBuilder()
+                        .setProject(resultSet.getString(PROJECT_NUMBER_COLUMN))
+                        .setWellname(resultSet.getString(WELLNAME_COLUMN))
+                        .setLocation(resultSet.getString(LOCATION_COLUMN))
+                        .setBillingType(resultSet.getString(BILLING_COLUMN))
+                        .setStartTimestamp(startTimeStamp)
+                        .setEndTimestamp(endTimeStamp)
+                        .setMileageStart(Integer.parseInt(resultSet.getString(MILEAGE_START_COLUMN)))
+                        .setMileageEnd(Integer.parseInt(resultSet.getString(MILEAGE_END_COLUMN)))
+                        .setDescription(resultSet.getString(DESCRIPTION_COLUMN))
+                        .setGPSCoords(gps)
+                        .build());
+
+                results.add(result);
+            }
+            String message = "Search Successful";
+
+            responseBodyBuilder.setResponseType(DHDPResponseType.SUCCESS);
+            responseBodyBuilder.setMessage(message);
+            responseBodyBuilder.setResults(results);
+            mMySqlService.closeConnection(connection);
+            return responseBodyBuilder.build();
+
+        } catch (SQLException e) {
+            mLogger.severe(e.toString());
+            mMySqlService.closeConnection(connection);
+        }
+
+        String message = "Search Failed";
+        mLogger.warning(message);
+
+        responseBodyBuilder.setResponseType(DHDPResponseType.FAILURE);
+        responseBodyBuilder.setMessage(message);
+        return responseBodyBuilder.build();
     }
 
     private FieldNote searchNote(Connection connection, String token, int ticketNumber) throws Exception {
@@ -428,10 +509,10 @@ public class FieldNoteService extends DHDPService implements FNService {
      * @return a map of the results
      * @throws SQLException if the results cannot be retrieved
      */
-    private ArrayList<Map<String, String>> getResults(DHDPRequestType requestType, ResultSet resultSet)
+    private ArrayList<Map<String, Object>> getResults(DHDPRequestType requestType, ResultSet resultSet)
             throws SQLException {
-        ArrayList<Map<String, String>> results = new ArrayList<>();
-        Map<String, String> resultMap = new HashMap<>();
+        ArrayList<Map<String, Object>> results = new ArrayList<>();
+        Map<String, Object> resultMap = new HashMap<>();
         //build results from result set
         if (requestType.equals(DHDPRequestType.LOGIN)) {
             // result is login token

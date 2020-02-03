@@ -4,6 +4,7 @@ public class FieldNotesConstants {
     // SERVICE NAMES
     public static final String FIELDNOTES_SERVICE_NAME = "FIELDNOTES";
     public static final String FIELDNOTES_VALIDATION_SERVICE_NAME = "FieldNotesValidationService";
+    public static final String FIELDNOTES_QUERY_SERVICE_NAME = "FieldNotesQueryService";
 
     // WORKFLOW NAME
     public static final String FIELDNOTES_WORKFLOW_NAME = "FieldNotesWorkflow";
@@ -56,7 +57,7 @@ public class FieldNotesConstants {
     public static final String END_DATETIME_KEY = "END_DATETIME";
     public static final String START_MILEAGE_KEY = "START_MILEAGE";
     public static final String END_MILEAGE_KEY = "END_MILEAGE";
-    public static final String DESCRIPTION = "DESCRIPTION";
+    public static final String DESCRIPTION_KEY = "DESCRIPTION";
     public static final String GPS = "GPS";
 
     // Field restricted fields

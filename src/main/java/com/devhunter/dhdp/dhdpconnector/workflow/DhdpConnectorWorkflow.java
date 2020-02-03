@@ -29,8 +29,8 @@ public class DhdpConnectorWorkflow extends DHDPWorkflow {
         // send an automatic response for request
         switch (requestHeader.getRequestType()) {
             case LOGIN:
-                ArrayList<Map<String, String>> results = new ArrayList<>();
-                Map<String, String> resultMap = new HashMap<>();
+                ArrayList<Map<String, Object>> results = new ArrayList<>();
+                Map<String, Object> resultMap = new HashMap<>();
                 resultMap.put("TOKEN", "123456789");
                 results.add(resultMap);
 

@@ -56,9 +56,9 @@ public class MySqlServiceTest {
 
         if (resultSet.next()) {
             // get result
-            Map<String, String> result = new HashMap<>();
+            Map<String, Object> result = new HashMap<>();
             result.put(TOKEN_KEY, resultSet.getString(TOKEN_COLUMN));
-            List<Map<String, String>> results = new ArrayList<>();
+            List<Map<String, Object>> results = new ArrayList<>();
             results.add(result);
 
             // build FNResponse

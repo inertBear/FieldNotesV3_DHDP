@@ -5,6 +5,7 @@ import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 import com.devhunter.dhdp.fieldnotes.model.FieldNote;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * interface for the FieldNotes service.
@@ -56,7 +57,7 @@ public interface FNService {
      * @param searchParameters to filter search results
      * @return response message
      */
-    DHDPResponseBody searchNote(String token, List<Object> searchParameters);
+    DHDPResponseBody searchNote(String token, Map<String, Object> searchParameters);
 
     /**
      * handles unsupported operations sent from a client

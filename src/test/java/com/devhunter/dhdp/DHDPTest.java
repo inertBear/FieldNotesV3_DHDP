@@ -22,8 +22,8 @@ public class DHDPTest {
      */
     @Test
     public void testDHDP() {
-        final String username = "keithh";
-        final String password = "hunterk";
+        final String username = "Unit Test";
+        final String password = "fnunittest";
         final String token = "1159616266";
         final String responseMessage = "Login Successful";
 

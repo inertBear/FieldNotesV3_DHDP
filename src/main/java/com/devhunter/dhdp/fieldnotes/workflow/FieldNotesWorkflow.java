@@ -9,9 +9,6 @@ import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.infrastructure.DHDPWorkflow;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
 
 /**
@@ -50,7 +47,7 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
                         .setEndTimestamp(body.getLDT(END_DATETIME_KEY))
                         .setMileageStart(body.getInt(START_MILEAGE_KEY))
                         .setMileageEnd(body.getInt(END_MILEAGE_KEY))
-                        .setDescription(body.getString(DESCRIPTION))
+                        .setDescription(body.getString(DESCRIPTION_KEY))
                         .setGPSCoords(body.getGpsCoord(GPS))
                         .build();
 
@@ -58,10 +55,7 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
             case DELETE:
                 return mService.deleteNote(body.getString(TOKEN_KEY), body.getInt(TICKET_NUMBER_KEY));
             case SEARCH:
-                // get search params
-                List<Object> searchParams = new ArrayList<>();
-
-                return mService.searchNote(body.getString(TOKEN_KEY), searchParams);
+                return mService.searchNote(body.getString(TOKEN_KEY), body);
             case UPDATE:
                 // create fieldnote to update to
                 fieldNote = FieldNote.newBuilder()
@@ -74,7 +68,7 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
                         .setEndTimestamp(body.getLDT(END_DATETIME_KEY))
                         .setMileageStart(body.getInt(START_MILEAGE_KEY))
                         .setMileageEnd(body.getInt(END_MILEAGE_KEY))
-                        .setDescription(body.getString(DESCRIPTION))
+                        .setDescription(body.getString(DESCRIPTION_KEY))
                         .setGPSCoords(body.getGpsCoord(GPS))
                         .build();
 
