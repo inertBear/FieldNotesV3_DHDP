@@ -26,7 +26,7 @@ public class DHDPThread extends Thread {
     private CodecService mCodecService;
     private Socket mSocket;
 
-    DHDPThread(DHDPServiceRegistry registry, DHDPWorkflowHandler handler, Socket clientSocket) {
+    DHDPThread(final DHDPServiceRegistry registry, final DHDPWorkflowHandler handler, final Socket clientSocket) {
         mCodecService = registry.resolve(CodecService.class);
         mHandler = handler;
         mSocket = clientSocket;
@@ -64,7 +64,7 @@ public class DHDPThread extends Thread {
      * @return request from client
      * @throws IOException if request cannot be read
      */
-    private DHDPRequest getRequest(Socket clientSocket) throws IOException {
+    private DHDPRequest getRequest(final Socket clientSocket) throws IOException {
         //read the HTTP request from the client socket
         InputStreamReader isr = new InputStreamReader(clientSocket.getInputStream());
 
@@ -73,23 +73,25 @@ public class DHDPThread extends Thread {
 
         // read the lines until we find the POST or GET data
         String line = br.readLine();
-        while (!line.isEmpty()) {
-            if (line.startsWith("GET") || line.startsWith("POST")) {
-                // get the encoded json string
-                line = line.substring(line.indexOf("?"), line.lastIndexOf(" "));
+        if (line != null) {
+            while (!line.isEmpty()) {
+                if (line.startsWith("GET") || line.startsWith("POST")) {
+                    // get the encoded json string
+                    line = line.substring(line.indexOf("?"), line.lastIndexOf(" "));
 
-                // decode request
-                return mCodecService.decode(line);
-            } else {
-                // get the next line
-                line = br.readLine();
+                    // decode request
+                    return mCodecService.decode(line);
+                } else {
+                    // get the next line
+                    line = br.readLine();
+                }
             }
         }
         mLogger.info("Rx empty HTTP Request");
         return null;
     }
 
-    public DHDPResponse setHeader(DHDPRequest request, DHDPResponseBody responseBody) {
+    private DHDPResponse setHeader(final DHDPRequest request, final DHDPResponseBody responseBody) {
         DHDPHeader requestHeader = request.getHeader();
         // build Response Header (swap originator and recipient)
         return DHDPResponse.newBuilder()
@@ -109,7 +111,7 @@ public class DHDPThread extends Thread {
      *
      * @param response to encode and send
      */
-    private void sendProcessingComplete(DHDPResponse response) {
+    private void sendProcessingComplete(final DHDPResponse response) {
         String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
         try {
             mSocket.getOutputStream().write(httpResponse.getBytes(StandardCharsets.UTF_8));
@@ -129,7 +131,7 @@ public class DHDPThread extends Thread {
     /**
      * sends a failure response to the Cient
      */
-    private void sendProcessingFailed(String message) {
+    private void sendProcessingFailed(final String message) {
         String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
         try {
             mSocket.getOutputStream().write(httpResponse.getBytes(StandardCharsets.UTF_8));
@@ -152,7 +154,7 @@ public class DHDPThread extends Thread {
      *
      * @return response created from known request values
      */
-    private DHDPResponse buildFailureResponse(String message) {
+    private DHDPResponse buildFailureResponse(final String message) {
         String unknownString = "UNKNOWN";
         String messageTemplate = "Unable to process request: ";
 

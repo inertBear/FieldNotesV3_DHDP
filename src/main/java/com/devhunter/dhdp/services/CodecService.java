@@ -15,11 +15,13 @@ import static com.devhunter.dhdp.infrastructure.DHDPConstants.CODEC_SERVICE_NAME
 /**
  * Encodes and Decodes client communications.
  * This Service is registered with the Service Registry upon startup
+ * <p>
+ * Used the decode Requests and encode Responses to DHDPCs
  */
 public class CodecService extends DHDPService {
     private static Logger mLogger = Logger.getLogger(CodecService.class.getSimpleName());
 
-    private CodecService(String name) {
+    private CodecService(final String name) {
         super(name);
     }
 
@@ -35,7 +37,7 @@ public class CodecService extends DHDPService {
      * @param response DHDPResponse to encode
      * @return encoded value
      */
-    public String encode(DHDPResponse response) {
+    public String encode(final DHDPResponse response) {
         // convert
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String responseString = gson.toJson(response, DHDPResponse.class);
@@ -52,10 +54,10 @@ public class CodecService extends DHDPService {
      * @param value String to decode
      * @return decoded value
      */
-    public DHDPRequest decode(String value) {
+    public DHDPRequest decode(final String value) {
         // decode
         byte[] decodedBytes = Base64.decodeBase64(value);
-        // convert
+        // convert to DHDPRequest
         String decodedRequest = new String(decodedBytes);
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         DHDPRequest request = gson.fromJson(decodedRequest, DHDPRequest.class);

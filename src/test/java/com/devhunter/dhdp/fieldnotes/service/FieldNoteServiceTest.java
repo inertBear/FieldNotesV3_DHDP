@@ -1,7 +1,6 @@
 package com.devhunter.dhdp.fieldnotes.service;
 
 import com.devhunter.DHDPConnector4J.model.GpsCoord;
-import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
 import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 import com.devhunter.DHDPConnector4J.response.DHDPResponseType;
 import com.devhunter.dhdp.fieldnotes.model.FieldNote;
@@ -11,7 +10,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +26,7 @@ public class FieldNoteServiceTest {
     @Before
     public void setup() {
         DHDPServiceRegistry registry = new DHDPServiceRegistry();
+        FieldNoteTimeService.initService(registry);
         MySqlService.initService(registry);
         FieldNoteValidationService.initService(registry);
         FieldNoteQueryService.initService(registry);
@@ -62,8 +61,8 @@ public class FieldNoteServiceTest {
                 .setWellname("Test WellName")
                 .setLocation("Office")
                 .setBillingType("Not Billable")
-                .setStartTimestamp(LocalDateTime.now())
-                .setEndTimestamp(LocalDateTime.now())
+                .setStartTimeStampMillis(System.currentTimeMillis())
+                .setEndTimestampMillis(System.currentTimeMillis())
                 .setMileageStart(1)
                 .setMileageEnd(2)
                 .setDescription("Test Description")
@@ -101,8 +100,8 @@ public class FieldNoteServiceTest {
                 .setWellname("Test WellName")
                 .setLocation("Office")
                 .setBillingType("Not Billable")
-                .setStartTimestamp(LocalDateTime.now())
-                .setEndTimestamp(LocalDateTime.now())
+                .setStartTimeStampMillis(System.currentTimeMillis())
+                .setEndTimestampMillis(System.currentTimeMillis())
                 .setMileageStart(1)
                 .setMileageEnd(2)
                 .setDescription("Test Description")

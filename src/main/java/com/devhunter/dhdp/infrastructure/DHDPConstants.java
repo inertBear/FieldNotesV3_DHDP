@@ -1,5 +1,8 @@
 package com.devhunter.dhdp.infrastructure;
 
+/**
+ * Constants used by the DHDP
+ */
 public class DHDPConstants {
 
     // SERVICE NAMES

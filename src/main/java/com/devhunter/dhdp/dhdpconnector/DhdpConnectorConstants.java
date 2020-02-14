@@ -1,5 +1,8 @@
 package com.devhunter.dhdp.dhdpconnector;
 
+/**
+ * Constants used by the DHDPC workflow/service
+ */
 public class DhdpConnectorConstants {
     // SERVICE NAME
     public static final String DHDPCONNECTOR_SERVICE_NAME = "DHDPCONNECTOR";

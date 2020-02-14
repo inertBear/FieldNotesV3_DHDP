@@ -3,11 +3,9 @@ package com.devhunter.dhdp.fieldnotes.model;
 import com.devhunter.DHDPConnector4J.model.GpsCoord;
 import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
 
-import java.time.LocalDateTime;
-
 /**
- * Models an internal response to a FieldNotes request. Acts as a medium for
- * transfer between the db query resultSet and the DHDPResponse
+ * Models a FieldNotes request.
+ * models transfer between a DHDPRequest -> FieldNotesService
  */
 public class FieldNote extends DHDPRequestBody {
     private String mUsername;
@@ -17,8 +15,8 @@ public class FieldNote extends DHDPRequestBody {
     private String mLocation;
     private GpsCoord mGps;
     private String mBilling;
-    private LocalDateTime mStartTimeStamp;
-    private LocalDateTime mEndTimeStamp;
+    private long mStartTimeStampMillis;
+    private long mEndTimeStampMillis;
     private int mMileageStart;
     private int mMileageEnd;
 
@@ -29,8 +27,8 @@ public class FieldNote extends DHDPRequestBody {
         mDescription = builder.description;
         mLocation = builder.location;
         mBilling = builder.billing;
-        mStartTimeStamp = builder.startTimeStamp;
-        mEndTimeStamp = builder.endTimeStamp;
+        mStartTimeStampMillis = builder.startTimeStampMillis;
+        mEndTimeStampMillis = builder.endTimeStampMillis;
         mMileageStart = builder.mileageStart;
         mMileageEnd = builder.mileageEnd;
         mGps = builder.gps;
@@ -68,12 +66,20 @@ public class FieldNote extends DHDPRequestBody {
         return mBilling;
     }
 
-    public LocalDateTime getStartTimestamp() {
-        return mStartTimeStamp;
+    public long getStartTimestampMillis() {
+        return mStartTimeStampMillis;
     }
 
-    public LocalDateTime getEndTimestamp() {
-        return mEndTimeStamp;
+    public boolean hasStartTimeStamp() {
+        return mStartTimeStampMillis != 0L;
+    }
+
+    public long getEndTimestampMillis() {
+        return mEndTimeStampMillis;
+    }
+
+    public boolean hasEndTimeStamp() {
+        return mEndTimeStampMillis != 0L;
     }
 
     public int getMileageStart() {
@@ -93,62 +99,62 @@ public class FieldNote extends DHDPRequestBody {
         private String location;
         private GpsCoord gps;
         private String billing;
-        private LocalDateTime startTimeStamp;
-        private LocalDateTime endTimeStamp;
+        private long startTimeStampMillis;
+        private long endTimeStampMillis;
         private int mileageStart;
         private int mileageEnd;
 
-        public Builder setUsername(String username) {
+        public Builder setUsername(final String username) {
             this.username = username;
             return this;
         }
 
-        public Builder setProject(String project) {
+        public Builder setProject(final String project) {
             this.project = project;
             return this;
         }
 
-        public Builder setWellname(String wellname) {
+        public Builder setWellname(final String wellname) {
             this.wellname = wellname;
             return this;
         }
 
-        public Builder setDescription(String description) {
+        public Builder setDescription(final String description) {
             this.description = description;
             return this;
         }
 
-        public Builder setLocation(String location) {
+        public Builder setLocation(final String location) {
             this.location = location;
             return this;
         }
 
-        public Builder setGPSCoords(GpsCoord gps) {
+        public Builder setGPSCoords(final GpsCoord gps) {
             this.gps = gps;
             return this;
         }
 
-        public Builder setBillingType(String billing) {
+        public Builder setBillingType(final String billing) {
             this.billing = billing;
             return this;
         }
 
-        public Builder setStartTimestamp(LocalDateTime startTimestamp) {
-            this.startTimeStamp = startTimestamp;
+        public Builder setStartTimeStampMillis(final long startTimestamp) {
+            this.startTimeStampMillis = startTimestamp;
             return this;
         }
 
-        public Builder setEndTimestamp(LocalDateTime endTimestamp) {
-            this.endTimeStamp = endTimestamp;
+        public Builder setEndTimestampMillis(final long endTimestamp) {
+            this.endTimeStampMillis = endTimestamp;
             return this;
         }
 
-        public Builder setMileageStart(int startMileage) {
+        public Builder setMileageStart(final int startMileage) {
             this.mileageStart = startMileage;
             return this;
         }
 
-        public Builder setMileageEnd(int endMileage) {
+        public Builder setMileageEnd(final int endMileage) {
             this.mileageEnd = endMileage;
             return this;
         }

@@ -1,28 +1,148 @@
 package com.devhunter.dhdp.fieldnotes.service;
 
+import com.devhunter.DHDPConnector4J.model.GpsCoord;
+import com.devhunter.dhdp.fieldnotes.model.FieldNote;
 import com.devhunter.dhdp.infrastructure.DHDPService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
+import com.devhunter.dhdp.services.MySqlService;
 
+import java.sql.Connection;
 import java.util.Map;
 
 import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
 
+/**
+ * Service to build query and take some of the load off of the FieldNoteService
+ */
 public class FieldNoteQueryService extends DHDPService {
+    private MySqlService mMySqlService;
+    private FieldNoteTimeService mTimeService;
 
-    private FieldNoteQueryService(String name) {
+    private FieldNoteQueryService(final String name, final DHDPServiceRegistry registry) {
         super(name);
+        mMySqlService = registry.resolve(MySqlService.class);
+        mTimeService = registry.resolve(FieldNoteTimeService.class);
     }
 
     public static void initService(DHDPServiceRegistry registry) {
         if (!registry.containsService(FieldNoteQueryService.class)) {
-            registry.register(FieldNoteQueryService.class, new FieldNoteQueryService(FIELDNOTES_QUERY_SERVICE_NAME));
+            registry.register(FieldNoteQueryService.class, new FieldNoteQueryService(FIELDNOTES_QUERY_SERVICE_NAME, registry));
         }
+
     }
 
-    String buildSearchQuery(String tableName, Map<String, Object> searchParameters) {
+    Connection getDatabaseConnection() {
+        //make connection to database
+        return mMySqlService.getAwsConnection(DB_SERVER, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD);
+    }
+
+    String buildLoginQuery(final String username, final String password) {
+        return "SELECT " + TOKEN_COLUMN +
+                " FROM " + LOGIN_TABLE +
+                " WHERE " + USERNAME_COLUMN + " = '" + username + "'" +
+                " AND " + PASSWORD_COLUMN + " = '" + password + "'";
+    }
+
+    String buildAddQuery(final String token, final FieldNote fieldNote) {
+        // create tablename
+        String tableName = "Data_" + token;
+
+        // prepare timestamps
+        String startDate = mTimeService.getDate(fieldNote.getStartTimestampMillis());
+        String startTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
+        String endDate = mTimeService.getDate(fieldNote.getEndTimestampMillis());
+        String endTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
+
+        // prepare gps : gps is not required
+        // - if provided, convert to (lat, long) string, else use "not provided"
+        GpsCoord gps = fieldNote.getGps();
+        String gpsString;
+        if (gps != null) {
+            gpsString = String.valueOf(gps.getLattitude()) + String.valueOf(gps.getLongitude());
+        } else {
+            gpsString = "Not Provided";
+        }
+
+        // create add query
+        return "INSERT INTO " + tableName +
+                " (userName, wellName, dateStart, timeStart, mileageStart, description," +
+                " mileageEnd, dateEnd, timeEnd, projectNumber, location, gps, billing)" +
+                " VALUES (" +
+                "'" + fieldNote.getUsername() + "'" + ", " +
+                "'" + fieldNote.getWellname() + "'" + ", " +
+                "'" + startDate + "'" + ", " +
+                "'" + startTime + "'" + ", " +
+                "'" + fieldNote.getMileageStart() + "'" + ", " +
+                "'" + fieldNote.getDescription() + "'" + ", " +
+                "'" + fieldNote.getMileageEnd() + "'" + ", " +
+                "'" + endDate + "'" + ", " +
+                "'" + endTime + "'" + ", " +
+                "'" + fieldNote.getProject() + "'" + ", " +
+                "'" + fieldNote.getLocation() + "'" + ", " +
+                "'" + gpsString + "'" + ", " +
+                "'" + fieldNote.getBillingType() + "'" +
+                ");";
+
+    }
+
+    String buildUpdateQuery(final String token, final int ticketNumber, final FieldNote fieldNote) {
+        // create tablename
+        String tableName = "Data_" + token;
+
+        // prepare timestamps
+        String startDate = mTimeService.getDate(fieldNote.getStartTimestampMillis());
+        String startTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
+        String endDate = mTimeService.getDate(fieldNote.getEndTimestampMillis());
+        String endTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
+
+        // prepare gps
+        GpsCoord gps = fieldNote.getGps();
+        String gpsString;
+        if (gps != null) {
+            gpsString = String.valueOf(gps.getLattitude()) + String.valueOf(gps.getLongitude());
+        } else {
+            gpsString = "Not Provided";
+        }
+
+        // create update query
+        return "UPDATE " + tableName +
+                " SET wellName = '" + fieldNote.getWellname() +
+                "', dateStart = '" + startDate +
+                "', timeStart = '" + startTime +
+                "', mileageStart = '" + fieldNote.getMileageStart() +
+                "', description = '" + fieldNote.getDescription() +
+                "', mileageEnd = '" + fieldNote.getMileageEnd() +
+                "', dateEnd = '" + endDate +
+                "', timeEnd = '" + endTime +
+                "', projectNumber = '" + fieldNote.getProject() +
+                "', location = '" + fieldNote.getLocation() +
+                "', gps = '" + gpsString +
+                "', billing = '" + fieldNote.getBillingType() +
+                "' WHERE ticketNumber = '" + ticketNumber + "'";
+    }
+
+    String buildDeleteQuery(final String token, final int ticketNumber) {
+        String tableName = "Data_" + token;
+        return "DELETE FROM " + tableName + " WHERE ticketNumber = '" + ticketNumber + "'";
+    }
+
+    String buildSearchQuery(final String token, final int ticketNumber) {
+        String tableName = "Data_" + token;
+        return "SELECT * FROM " + tableName + " WHERE ticketNumber = '" + ticketNumber + "'";
+    }
+
+    /**
+     * build a search query based on a map of search parameters
+     *
+     * @param token
+     * @param searchParameters
+     * @return
+     */
+    String buildSearchQuery(final String token, Map<String, Object> searchParameters) {
+        String tableName = "Data_" + token;
         StringBuilder searchQuery = new StringBuilder("SELECT * FROM " + tableName);
 
-        // take the token out of the params
+        // take the token out of the params (if its there)
         searchParameters.remove(TOKEN_KEY);
 
         // add each parameter to the query
@@ -31,12 +151,13 @@ public class FieldNoteQueryService extends DHDPService {
             boolean first = true;
             for (String each : searchParameters.keySet()) {
                 if (first) {
-                    // include a WHERE clause
+                    // include a WHERE clause on the first iteration of the loop
                     searchQuery.append(" WHERE ");
                     first = false;
                 } else {
                     searchQuery.append(" AND ");
                 }
+
                 switch (each) {
                     case TICKET_NUMBER_KEY:
                         searchQuery.append(TICKET_NUMBER_COLUMN).append(" = '").append(searchParameters.get(each)).append("'");
@@ -68,5 +189,4 @@ public class FieldNoteQueryService extends DHDPService {
         }
         return searchQuery.toString();
     }
-
 }

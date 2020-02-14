@@ -18,12 +18,12 @@ import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.FIELDNOTES_WORKF
  * This class uses the information received in the header of a
  * Request to determine which workflow to use.
  * <p>
- * DHDPWorkflows are mapped to the DHDPEntity that originated the request.
+ * DHDPWorkflows are mapped to the Originator of a request.
  */
 class DHDPWorkflowHandler {
     private Map<String, DHDPWorkflow> mWorkflowMap = new HashMap<>();
 
-    DHDPWorkflowHandler(DHDPServiceRegistry registry) {
+    DHDPWorkflowHandler(final DHDPServiceRegistry registry) {
         initWorkflows(registry);
     }
 
@@ -33,7 +33,7 @@ class DHDPWorkflowHandler {
      * @param header to determine originator
      * @return the workflow that will process the request
      */
-    DHDPWorkflow getWorkflow(DHDPHeader header) {
+    DHDPWorkflow getWorkflow(final DHDPHeader header) {
         // get originator from requestHeader
         String originator = header.getOriginator();
         // return the corresponding workflow
@@ -46,7 +46,7 @@ class DHDPWorkflowHandler {
      *
      * @param registry containing services
      */
-    private void initWorkflows(DHDPServiceRegistry registry) {
+    private void initWorkflows(final DHDPServiceRegistry registry) {
         mWorkflowMap.put(DHDPCONNECTOR_SERVICE_NAME, new DhdpConnectorWorkflow(DHDPCONNECTOR_WORKFLOW_NAME, registry));
         mWorkflowMap.put(FIELDNOTES_SERVICE_NAME, new FieldNotesWorkflow(FIELDNOTES_WORKFLOW_NAME, registry));
     }

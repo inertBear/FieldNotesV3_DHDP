@@ -13,8 +13,6 @@ import com.devhunter.dhdp.services.MySqlService;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,12 +25,14 @@ public class FieldNoteService extends DHDPService implements FNService {
     private MySqlService mMySqlService;
     private FieldNoteValidationService mValidationService;
     private FieldNoteQueryService mQueryService;
+    private FieldNoteTimeService mTimeService;
 
-    private FieldNoteService(String name, DHDPServiceRegistry registry) {
+    private FieldNoteService(final String name, final DHDPServiceRegistry registry) {
         super(name);
         mMySqlService = registry.resolve(MySqlService.class);
         mValidationService = registry.resolve(FieldNoteValidationService.class);
         mQueryService = registry.resolve(FieldNoteQueryService.class);
+        mTimeService = registry.resolve(FieldNoteTimeService.class);
     }
 
     public static void initService(DHDPServiceRegistry registry) {
@@ -42,7 +42,7 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody login(String username, String password) {
+    public DHDPResponseBody login(final String username, final String password) {
         DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
 
         try {
@@ -54,8 +54,8 @@ public class FieldNoteService extends DHDPService implements FNService {
             return responseBodyBuilder.build();
         }
 
+        Connection connection = mQueryService.getDatabaseConnection();
         //make connection to database
-        Connection connection = mMySqlService.getAwsConnection(DB_SERVER, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD);
         if (connection == null) {
             String message = "No Connection";
             mLogger.info(message);
@@ -65,14 +65,12 @@ public class FieldNoteService extends DHDPService implements FNService {
             return responseBodyBuilder.build();
         }
 
-        // send login executeQuery
-        String loginQuery = "SELECT " + TOKEN_COLUMN +
-                " FROM " + LOGIN_TABLE +
-                " WHERE " + USERNAME_COLUMN + " = '" + username + "'" +
-                " AND " + PASSWORD_COLUMN + " = '" + password + "'";
+        // build login query
+        String loginQuery = mQueryService.buildLoginQuery(username, password);
+        // executeQuery
         ResultSet resultSet = mMySqlService.executeQuery(connection, loginQuery);
 
-        //process login results
+        //process results
         try {
             if (resultSet != null && resultSet.next()) {
                 String message = "Login Successful";
@@ -97,7 +95,7 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody addNote(String token, FieldNote fieldNote) {
+    public DHDPResponseBody addNote(final String token, final FieldNote fieldNote) {
         if (token != null) {
             DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
 
@@ -111,27 +109,8 @@ public class FieldNoteService extends DHDPService implements FNService {
                 return responseBodyBuilder.build();
             }
 
-            // pull out start time and date
-            LocalDateTime startTimestamp = fieldNote.getStartTimestamp();
-            String startTime = startTimestamp.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            String startDate = startTimestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
-            // pull out end time and date
-            LocalDateTime endTimestamp = fieldNote.getStartTimestamp();
-            String endTime = endTimestamp.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            String endDate = endTimestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
-            // gps is not required - if provided, convert to (lat, long) string, else use "not provided"
-            GpsCoord gps = fieldNote.getGps();
-            String gpsString;
-            if (gps != null) {
-                gpsString = String.valueOf(gps.getLattitude()) + String.valueOf(gps.getLongitude());
-            } else {
-                gpsString = "Not Provided";
-            }
-
-            //make connection to database
-            Connection connection = mMySqlService.getAwsConnection(DB_SERVER, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD);
+            // make connection to database
+            Connection connection = mQueryService.getDatabaseConnection();
             if (connection == null) {
                 String message = "No Connection";
                 mLogger.info(message);
@@ -141,36 +120,18 @@ public class FieldNoteService extends DHDPService implements FNService {
                 return responseBodyBuilder.build();
             }
 
-            String addTable = "Data_" + token;
-            // send add executeQuery
-            String addQuery = "INSERT INTO " + addTable +
-                    " (userName, wellName, dateStart, timeStart, mileageStart, description," +
-                    " mileageEnd, dateEnd, timeEnd, projectNumber, location, gps, billing)" +
-                    " VALUES (" +
-                    "'" + fieldNote.getUsername() + "'" + ", " +
-                    "'" + fieldNote.getWellname() + "'" + ", " +
-                    "'" + startDate + "'" + ", " +
-                    "'" + startTime + "'" + ", " +
-                    "'" + fieldNote.getMileageStart() + "'" + ", " +
-                    "'" + fieldNote.getDescription() + "'" + ", " +
-                    "'" + fieldNote.getMileageEnd() + "'" + ", " +
-                    "'" + endDate +
-                    "'" + ", " + "'" + endTime + "'" + ", " +
-                    "'" + fieldNote.getProject() + "'" + ", " +
-                    "'" + fieldNote.getLocation() + "'" + ", " +
-                    "'" + gpsString + "'" + ", " +
-                    "'" + fieldNote.getBillingType() + "'" +
-                    ");";
+            // build query
+            String addQuery = mQueryService.buildAddQuery(token, fieldNote);
+            // run query
             int numAlteredRows = mMySqlService.executeUpdate(connection, addQuery);
 
             // process add results
             if (numAlteredRows > 0) {
                 String message = "FieldNote Added";
 
-                String selectLastIdQuery = "SELECT LAST_INSERT_ID();";
-                ResultSet resultSet = mMySqlService.executeQuery(connection, selectLastIdQuery);
+                // get the newly added ticket number
+                ResultSet resultSet = mMySqlService.getLastInsertId(connection);
 
-                // process get last insert results
                 try {
                     if (resultSet != null && resultSet.next()) {
                         // build results (using ticket number of added FieldNote)
@@ -212,12 +173,12 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody updateNote(String token, int ticketNumber, FieldNote update) {
+    public DHDPResponseBody updateNote(final String token, final int ticketNumber, FieldNote update) {
         if (token != null) {
             DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
 
             // make connection to database
-            Connection connection = mMySqlService.getAwsConnection(DB_SERVER, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD);
+            Connection connection = mQueryService.getDatabaseConnection();
             if (connection == null) {
                 String message = "No Connection";
                 mLogger.info(message);
@@ -240,44 +201,11 @@ public class FieldNoteService extends DHDPService implements FNService {
             }
 
             // merge notes to create update
-            FieldNote updatedNote = mergeFieldNotes(original, update);
+            final FieldNote updatedNote = mergeFieldNotes(original, update);
 
-            // pull out start time and date
-            LocalDateTime startTimestamp = updatedNote.getStartTimestamp();
-            String updatedStartTime = startTimestamp.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            String updateStartDate = startTimestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
-            // pull out end time and date
-            LocalDateTime endTimestamp = updatedNote.getStartTimestamp();
-            String updatedEndTime = endTimestamp.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            String updatedEndDate = endTimestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
-            // pull out gps string
-            GpsCoord gps = updatedNote.getGps();
-            String gpsString;
-            if (gps != null) {
-                gpsString = String.valueOf(gps.getLattitude()) + String.valueOf(gps.getLongitude());
-            } else {
-                gpsString = "Not Provided";
-            }
-
-            String updateTable = "Data_" + token;
-            // send add executeQuery
-            String updateQuery = "UPDATE " + updateTable +
-                    " SET wellName = '" + updatedNote.getWellname() +
-                    "', dateStart = '" + updateStartDate +
-                    "', timeStart = '" + updatedStartTime +
-                    "', mileageStart = '" + updatedNote.getMileageStart() +
-                    "', description = '" + updatedNote.getDescription() +
-                    "', mileageEnd = '" + updatedNote.getMileageEnd() +
-                    "', dateEnd = '" + updatedEndTime +
-                    "', timeEnd = '" + updatedEndDate +
-                    "', projectNumber = '" + updatedNote.getProject() +
-                    "', location = '" + updatedNote.getLocation() +
-                    "', gps = '" + gpsString +
-                    "', billing = '" + updatedNote.getBillingType() +
-                    "' WHERE ticketNumber = '" + ticketNumber + "'";
-
+            // build query
+            String updateQuery = mQueryService.buildUpdateQuery(token, ticketNumber, updatedNote);
+            // run query
             int numUpdatedRows = mMySqlService.executeUpdate(connection, updateQuery);
 
             String message;
@@ -310,12 +238,12 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody deleteNote(String token, int ticketNumber) {
+    public DHDPResponseBody deleteNote(final String token, final int ticketNumber) {
         if (token != null) {
             DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
 
             // make connection to database
-            Connection connection = mMySqlService.getAwsConnection(DB_SERVER, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD);
+            Connection connection = mQueryService.getDatabaseConnection();
             if (connection == null) {
                 String message = "No Connection";
                 mLogger.info(message);
@@ -325,9 +253,9 @@ public class FieldNoteService extends DHDPService implements FNService {
                 return responseBodyBuilder.build();
             }
 
-            String deleteTable = "Data_" + token;
-            // send add executeQuery
-            String deleteQuery = "DELETE FROM " + deleteTable + " WHERE ticketNumber = '" + ticketNumber + "'";
+            //build query
+            String deleteQuery = mQueryService.buildDeleteQuery(token, ticketNumber);
+            // execute query
             int numDeletedRows = mMySqlService.executeUpdate(connection, deleteQuery);
 
             String message;
@@ -354,14 +282,11 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody searchNote(String token, Map<String, Object> searchParameters) {
+    public DHDPResponseBody searchNote(final String token, final Map<String, Object> searchParameters) {
         DHDPResponseBody.Builder responseBodyBuilder = DHDPResponseBody.newBuilder();
 
-        String searchTable = "Data_" + token;
-        String searchQuery = mQueryService.buildSearchQuery(searchTable, searchParameters);
-
         // make connection to database
-        Connection connection = mMySqlService.getAwsConnection(DB_SERVER, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD);
+        Connection connection = mQueryService.getDatabaseConnection();
         if (connection == null) {
             String message = "No Connection";
             mLogger.info(message);
@@ -371,6 +296,9 @@ public class FieldNoteService extends DHDPService implements FNService {
             return responseBodyBuilder.build();
         }
 
+        // build query
+        String searchQuery = mQueryService.buildSearchQuery(token, searchParameters);
+        // execute query
         ResultSet resultSet = mMySqlService.executeQuery(connection, searchQuery);
 
         try {
@@ -379,19 +307,14 @@ public class FieldNoteService extends DHDPService implements FNService {
             Map<String, Object> result = new HashMap<>();
 
             while (resultSet.next()) {
-                // create FieldNote from search results
                 String dateStartString = resultSet.getString(DATE_START_COLUMN);
                 String timeStartString = resultSet.getString(TIME_START_COLUMN);
-                mLogger.info(dateStartString + "T" + timeStartString);
-                LocalDateTime startTimeStamp = LocalDateTime.parse(dateStartString + "T" + timeStartString);
 
-                //TODO: somehow the time and date columns are reversed.... look into this
-//                String dateEndString = resultSet.getString(DATE_END_COLUMN);
-//                String timeEndString = resultSet.getString(TIME_END_COLUMN);
-                String dateEndString = resultSet.getString(TIME_END_COLUMN);
-                String timeEndString = resultSet.getString(DATE_END_COLUMN);
-                mLogger.info(dateEndString + "T" + timeEndString);
-                LocalDateTime endTimeStamp = LocalDateTime.parse(dateEndString + "T" + timeEndString);
+                String dateEndString = resultSet.getString(DATE_END_COLUMN);
+                String timeEndString = resultSet.getString(TIME_END_COLUMN);
+
+                long startTimestampMillis = mTimeService.getDateInMillis(dateStartString + " " + timeStartString);
+                long endTimestampMillis = mTimeService.getDateInMillis(dateEndString + " " + timeEndString);
 
                 GpsCoord gps = null;
                 String gpsString = resultSet.getString(GPS_COLUMN);
@@ -407,8 +330,8 @@ public class FieldNoteService extends DHDPService implements FNService {
                         .setWellname(resultSet.getString(WELLNAME_COLUMN))
                         .setLocation(resultSet.getString(LOCATION_COLUMN))
                         .setBillingType(resultSet.getString(BILLING_COLUMN))
-                        .setStartTimestamp(startTimeStamp)
-                        .setEndTimestamp(endTimeStamp)
+                        .setStartTimeStampMillis(startTimestampMillis)
+                        .setEndTimestampMillis(endTimestampMillis)
                         .setMileageStart(Integer.parseInt(resultSet.getString(MILEAGE_START_COLUMN)))
                         .setMileageEnd(Integer.parseInt(resultSet.getString(MILEAGE_END_COLUMN)))
                         .setDescription(resultSet.getString(DESCRIPTION_COLUMN))
@@ -438,43 +361,35 @@ public class FieldNoteService extends DHDPService implements FNService {
         return responseBodyBuilder.build();
     }
 
-    private FieldNote searchNote(Connection connection, String token, int ticketNumber) throws Exception {
-        String searchTable = "Data_" + token;
-        String deleteQuery = "SELECT * FROM " + searchTable + " WHERE ticketNumber = '" + ticketNumber + "'";
-        // send search executeQuery
-        ResultSet resultSet = mMySqlService.executeQuery(connection, deleteQuery);
+    private FieldNote searchNote(Connection connection, final String token, final int ticketNumber) throws Exception {
+        // create query
+        String searchQuery = mQueryService.buildSearchQuery(token, ticketNumber);
+        // execute query
+        ResultSet resultSet = mMySqlService.executeQuery(connection, searchQuery);
 
         try {
             if (resultSet != null && resultSet.next()) {
-                // create FieldNote from search results
                 String dateStartString = resultSet.getString(DATE_START_COLUMN);
                 String timeStartString = resultSet.getString(TIME_START_COLUMN);
-                LocalDateTime startTimeStamp = LocalDateTime.parse(dateStartString + "T" + timeStartString);
 
                 String dateEndString = resultSet.getString(DATE_END_COLUMN);
                 String timeEndString = resultSet.getString(TIME_END_COLUMN);
-                LocalDateTime endTimeStamp = LocalDateTime.parse(dateEndString + "T" + timeEndString);
 
-                GpsCoord gps = null;
-                String gpsString = resultSet.getString(GPS_COLUMN);
-                if (!gpsString.equals("Not Provided")) {
-                    gps = GpsCoord.newBuilder()
-                            .setLatitude(Double.parseDouble(gpsString.substring(0, gpsString.indexOf(","))))
-                            .setLongitude(Double.parseDouble(gpsString.substring(gpsString.indexOf("," + 2))))
-                            .build();
-                }
+                long startTimestampMillis = mTimeService.getDateInMillis(dateStartString + " " + timeStartString);
+                long endTimestampMillis = mTimeService.getDateInMillis(dateEndString + " " + timeEndString);
 
                 return FieldNote.newBuilder()
                         .setProject(resultSet.getString(PROJECT_NUMBER_COLUMN))
                         .setWellname(resultSet.getString(WELLNAME_COLUMN))
                         .setLocation(resultSet.getString(LOCATION_COLUMN))
                         .setBillingType(resultSet.getString(BILLING_COLUMN))
-                        .setStartTimestamp(startTimeStamp)
-                        .setEndTimestamp(endTimeStamp)
+                        .setStartTimeStampMillis(startTimestampMillis)
+                        .setEndTimestampMillis(endTimestampMillis)
                         .setMileageStart(Integer.parseInt(resultSet.getString(MILEAGE_START_COLUMN)))
                         .setMileageEnd(Integer.parseInt(resultSet.getString(MILEAGE_END_COLUMN)))
                         .setDescription(resultSet.getString(DESCRIPTION_COLUMN))
-                        .setGPSCoords(gps).build();
+                        .setGPSCoords(getGpsCoord(resultSet.getString(GPS_COLUMN)))
+                        .build();
             }
         } catch (SQLException e) {
             mLogger.severe(e.toString());
@@ -484,7 +399,7 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody unsupportedNote(DHDPHeader header) {
+    public DHDPResponseBody unsupportedNote(final DHDPHeader header) {
         DHDPResponseBody.Builder response = DHDPResponseBody.newBuilder();
         response.setResponseType(DHDPResponseType.FAILURE);
         response.setMessage("Unsupported RequestType: " + header.getRequestType());
@@ -493,7 +408,7 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody malformedNote(String message) {
+    public DHDPResponseBody malformedNote(final String message) {
         DHDPResponseBody.Builder response = DHDPResponseBody.newBuilder();
         response.setResponseType(DHDPResponseType.FAILURE);
         response.setMessage("Malformed Request: " + message);
@@ -509,7 +424,7 @@ public class FieldNoteService extends DHDPService implements FNService {
      * @return a map of the results
      * @throws SQLException if the results cannot be retrieved
      */
-    private ArrayList<Map<String, Object>> getResults(DHDPRequestType requestType, ResultSet resultSet)
+    private ArrayList<Map<String, Object>> getResults(final DHDPRequestType requestType, final ResultSet resultSet)
             throws SQLException {
         ArrayList<Map<String, Object>> results = new ArrayList<>();
         Map<String, Object> resultMap = new HashMap<>();
@@ -526,7 +441,19 @@ public class FieldNoteService extends DHDPService implements FNService {
         return results;
     }
 
-    private FieldNote mergeFieldNotes(FieldNote original, FieldNote update) {
+    private GpsCoord getGpsCoord(final String gpsString) {
+        if (gpsString != null) {
+            if (!gpsString.equals("Not Provided")) {
+                return GpsCoord.newBuilder()
+                        .setLatitude(Double.parseDouble(gpsString.substring(0, gpsString.indexOf(","))))
+                        .setLongitude(Double.parseDouble(gpsString.substring(gpsString.indexOf("," + 2))))
+                        .build();
+            }
+        }
+        return null;
+    }
+
+    private FieldNote mergeFieldNotes(final FieldNote original, final FieldNote update) {
         FieldNote.Builder updatedNote = FieldNote.newBuilder();
         // get updated project
         if (update.getProject() != null) {
@@ -556,19 +483,9 @@ public class FieldNoteService extends DHDPService implements FNService {
             updatedNote.setBillingType(original.getBillingType());
         }
 
-        // get updated start time
-        if (update.getStartTimestamp() != null) {
-            updatedNote.setStartTimestamp(update.getStartTimestamp());
-        } else {
-            updatedNote.setStartTimestamp(original.getStartTimestamp());
-        }
-
-        // get updated end time
-        if (update.getEndTimestamp() != null) {
-            updatedNote.setEndTimestamp(update.getEndTimestamp());
-        } else {
-            updatedNote.setEndTimestamp(original.getEndTimestamp());
-        }
+        // NOTE: timestamps are required
+        updatedNote.setStartTimeStampMillis(update.getStartTimestampMillis());
+        updatedNote.setEndTimestampMillis(update.getEndTimestampMillis());
 
         // get updated start mileage
         // mileage of 0 is so unlikely - it's negligible

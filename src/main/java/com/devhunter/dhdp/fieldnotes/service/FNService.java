@@ -4,7 +4,6 @@ import com.devhunter.DHDPConnector4J.header.DHDPHeader;
 import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
 import com.devhunter.dhdp.fieldnotes.model.FieldNote;
 
-import java.util.List;
 import java.util.Map;
 
 /**

@@ -18,22 +18,24 @@ import java.util.Map;
  */
 public class DhdpConnectorWorkflow extends DHDPWorkflow {
 
-    public DhdpConnectorWorkflow(String name, DHDPServiceRegistry registry) {
+    public DhdpConnectorWorkflow(final String name, final DHDPServiceRegistry registry) {
         super(name, registry);
     }
 
     @Override
-    public DHDPResponseBody process(DHDPRequest request) {
+    public DHDPResponseBody process(final DHDPRequest request) {
         DHDPHeader requestHeader = request.getHeader();
 
         // send an automatic response for request
         switch (requestHeader.getRequestType()) {
             case LOGIN:
+                // Fake success by the DHDP
                 ArrayList<Map<String, Object>> results = new ArrayList<>();
                 Map<String, Object> resultMap = new HashMap<>();
                 resultMap.put("TOKEN", "123456789");
                 results.add(resultMap);
 
+                // response with DHDPResponseBody
                 return DHDPResponseBody.newBuilder()
                         .setResponseType(DHDPResponseType.SUCCESS)
                         .setMessage("Login Successful")

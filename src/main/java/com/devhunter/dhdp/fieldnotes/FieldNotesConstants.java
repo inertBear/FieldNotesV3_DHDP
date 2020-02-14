@@ -1,10 +1,14 @@
 package com.devhunter.dhdp.fieldnotes;
 
+/**
+ * Constants used by the FieldNotes workflow/service
+ */
 public class FieldNotesConstants {
     // SERVICE NAMES
     public static final String FIELDNOTES_SERVICE_NAME = "FIELDNOTES";
     public static final String FIELDNOTES_VALIDATION_SERVICE_NAME = "FieldNotesValidationService";
     public static final String FIELDNOTES_QUERY_SERVICE_NAME = "FieldNotesQueryService";
+    public static final String FIELDNOTES_TIME_SERVICE = "FieldNotesTimeService";
 
     // WORKFLOW NAME
     public static final String FIELDNOTES_WORKFLOW_NAME = "FieldNotesWorkflow";
@@ -52,7 +56,7 @@ public class FieldNotesConstants {
     public static final String PROJECT_KEY = "PROJECT";
     public static final String WELLNAME_KEY = "WELLNAME";
     public static final String LOCATION_KEY = "LOCATION";
-    public static final String BILLING_KEY = "BILLING";
+    public static final String BILLING_KEY = "BILLING_TYPE";
     public static final String START_DATETIME_KEY = "START_DATETIME";
     public static final String END_DATETIME_KEY = "END_DATETIME";
     public static final String START_MILEAGE_KEY = "START_MILEAGE";

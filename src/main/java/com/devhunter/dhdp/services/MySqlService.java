@@ -19,7 +19,7 @@ public class MySqlService extends DHDPService {
             "?verifyServerCertificate=true&useSSL=true&requireSSL=true";
     private static final Logger mLogger = Logger.getLogger(MySqlService.class.getName());
 
-    private MySqlService(String name) {
+    private MySqlService(final String name) {
         super(name);
     }
 
@@ -38,7 +38,8 @@ public class MySqlService extends DHDPService {
      * @param dbPassword database apssword
      * @return a connection to executeQuery against
      */
-    public Connection getAwsConnection(String endpoint, int port, String dbName, String dbUsername, String dbPassword) {
+    public Connection getAwsConnection(final String endpoint, final int port, final String dbName,
+                                       final String dbUsername, final String dbPassword) {
         try {
             Class.forName(JDBC_DRIVER_CLASSNAME);
             String url = buildAwsUrl(endpoint, port, dbName);
@@ -57,7 +58,7 @@ public class MySqlService extends DHDPService {
      * @param dbName   to connect to
      * @return url string to make a connection with
      */
-    private String buildAwsUrl(String endpoint, int port, String dbName) {
+    private String buildAwsUrl(final String endpoint, final int port, final String dbName) {
         String url = URL_TEMPLATE.replace("<ENDPOINT>", endpoint);
         url = url.replace("<PORT>", String.valueOf(port));
         url = url.replace("<DBNAME>", dbName);
@@ -70,7 +71,7 @@ public class MySqlService extends DHDPService {
      * @param connection to send executeQuery with
      * @param query      to be queried on connected database
      */
-    public ResultSet executeQuery(Connection connection, String query) {
+    public ResultSet executeQuery(final Connection connection, final String query) {
         try {
             Statement stmt = connection.createStatement();
             return stmt.executeQuery(query);
@@ -87,7 +88,7 @@ public class MySqlService extends DHDPService {
      * @param query      to be updated on connected database
      * @return the number of rows affected by the update
      */
-    public int executeUpdate(Connection connection, String query) {
+    public int executeUpdate(Connection connection, final String query) {
         try {
             Statement smt = connection.createStatement();
             return smt.executeUpdate(query);
@@ -95,6 +96,10 @@ public class MySqlService extends DHDPService {
             mLogger.severe(e.toString());
         }
         return 0;
+    }
+
+    public ResultSet getLastInsertId(Connection connection) {
+        return executeQuery(connection, "SELECT LAST_INSERT_ID();");
     }
 
     /**
