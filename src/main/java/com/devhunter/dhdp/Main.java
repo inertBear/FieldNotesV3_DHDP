@@ -2,7 +2,7 @@ package com.devhunter.dhdp;
 
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteQueryService;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteService;
-import com.devhunter.dhdp.fieldnotes.service.FieldNoteTimeService;
+import com.devhunter.dhdp.fieldnotes.service.FieldNoteFormatService;
 import com.devhunter.dhdp.fieldnotes.service.FieldNoteValidationService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
 import com.devhunter.dhdp.services.CodecService;
@@ -66,10 +66,9 @@ public class Main {
     }
 
     private static void initFieldNotes(DHDPServiceRegistry registry) {
-        FieldNoteTimeService.initService(registry);
+        FieldNoteFormatService.initService(registry);
         FieldNoteValidationService.initService(registry);
         FieldNoteQueryService.initService(registry);
         FieldNoteService.initService(registry);
-
     }
 }

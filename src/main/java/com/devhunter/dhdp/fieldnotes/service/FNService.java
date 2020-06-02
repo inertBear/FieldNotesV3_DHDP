@@ -70,7 +70,8 @@ public interface FNService {
      * handles malformed request from a client
      *
      * @param message to send to client
+     * @param e throwable for the results
      * @return response message
      */
-    DHDPResponseBody malformedNote(String message);
+    DHDPResponseBody malformedNote(String message, Throwable e);
 }

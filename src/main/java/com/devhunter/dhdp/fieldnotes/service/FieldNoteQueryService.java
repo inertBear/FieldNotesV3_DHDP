@@ -1,6 +1,5 @@
 package com.devhunter.dhdp.fieldnotes.service;
 
-import com.devhunter.DHDPConnector4J.model.GpsCoord;
 import com.devhunter.dhdp.fieldnotes.model.FieldNote;
 import com.devhunter.dhdp.infrastructure.DHDPService;
 import com.devhunter.dhdp.infrastructure.DHDPServiceRegistry;
@@ -16,19 +15,18 @@ import static com.devhunter.dhdp.fieldnotes.FieldNotesConstants.*;
  */
 public class FieldNoteQueryService extends DHDPService {
     private MySqlService mMySqlService;
-    private FieldNoteTimeService mTimeService;
+    private FieldNoteFormatService mFormatService;
 
     private FieldNoteQueryService(final String name, final DHDPServiceRegistry registry) {
         super(name);
         mMySqlService = registry.resolve(MySqlService.class);
-        mTimeService = registry.resolve(FieldNoteTimeService.class);
+        mFormatService = registry.resolve(FieldNoteFormatService.class);
     }
 
     public static void initService(DHDPServiceRegistry registry) {
         if (!registry.containsService(FieldNoteQueryService.class)) {
             registry.register(FieldNoteQueryService.class, new FieldNoteQueryService(FIELDNOTES_QUERY_SERVICE_NAME, registry));
         }
-
     }
 
     Connection getDatabaseConnection() {
@@ -48,20 +46,13 @@ public class FieldNoteQueryService extends DHDPService {
         String tableName = "Data_" + token;
 
         // prepare timestamps
-        String startDate = mTimeService.getDate(fieldNote.getStartTimestampMillis());
-        String startTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
-        String endDate = mTimeService.getDate(fieldNote.getEndTimestampMillis());
-        String endTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
+        String startDate = mFormatService.toDateString(fieldNote.getStartTimestampMillis());
+        String startTime = mFormatService.toTimeString(fieldNote.getEndTimestampMillis());
+        String endDate = mFormatService.toDateString(fieldNote.getEndTimestampMillis());
+        String endTime = mFormatService.toTimeString(fieldNote.getEndTimestampMillis());
 
         // prepare gps : gps is not required
-        // - if provided, convert to (lat, long) string, else use "not provided"
-        GpsCoord gps = fieldNote.getGps();
-        String gpsString;
-        if (gps != null) {
-            gpsString = String.valueOf(gps.getLattitude()) + String.valueOf(gps.getLongitude());
-        } else {
-            gpsString = "Not Provided";
-        }
+        String gpsString = mFormatService.toGpsString(fieldNote.getGps());
 
         // create add query
         return "INSERT INTO " + tableName +
@@ -90,19 +81,13 @@ public class FieldNoteQueryService extends DHDPService {
         String tableName = "Data_" + token;
 
         // prepare timestamps
-        String startDate = mTimeService.getDate(fieldNote.getStartTimestampMillis());
-        String startTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
-        String endDate = mTimeService.getDate(fieldNote.getEndTimestampMillis());
-        String endTime = mTimeService.getTime(fieldNote.getEndTimestampMillis());
+        String startDate = mFormatService.toDateString(fieldNote.getStartTimestampMillis());
+        String startTime = mFormatService.toTimeString(fieldNote.getEndTimestampMillis());
+        String endDate = mFormatService.toDateString(fieldNote.getEndTimestampMillis());
+        String endTime = mFormatService.toTimeString(fieldNote.getEndTimestampMillis());
 
-        // prepare gps
-        GpsCoord gps = fieldNote.getGps();
-        String gpsString;
-        if (gps != null) {
-            gpsString = String.valueOf(gps.getLattitude()) + String.valueOf(gps.getLongitude());
-        } else {
-            gpsString = "Not Provided";
-        }
+        // prepare gps : gps is not required
+        String gpsString = mFormatService.toGpsString(fieldNote.getGps());
 
         // create update query
         return "UPDATE " + tableName +

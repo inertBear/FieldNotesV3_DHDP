@@ -15,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -25,14 +26,14 @@ public class FieldNoteService extends DHDPService implements FNService {
     private MySqlService mMySqlService;
     private FieldNoteValidationService mValidationService;
     private FieldNoteQueryService mQueryService;
-    private FieldNoteTimeService mTimeService;
+    private FieldNoteFormatService mTimeService;
 
     private FieldNoteService(final String name, final DHDPServiceRegistry registry) {
         super(name);
         mMySqlService = registry.resolve(MySqlService.class);
         mValidationService = registry.resolve(FieldNoteValidationService.class);
         mQueryService = registry.resolve(FieldNoteQueryService.class);
-        mTimeService = registry.resolve(FieldNoteTimeService.class);
+        mTimeService = registry.resolve(FieldNoteFormatService.class);
     }
 
     public static void initService(DHDPServiceRegistry registry) {
@@ -168,7 +169,7 @@ public class FieldNoteService extends DHDPService implements FNService {
             responseBodyBuilder.setMessage(message);
             return responseBodyBuilder.build();
         } else {
-            return malformedNote("No User Token");
+            return malformedNote("No User Token", new Exception("TOKEN NOT INCLUDED IN REQUEST"));
         }
     }
 
@@ -233,7 +234,7 @@ public class FieldNoteService extends DHDPService implements FNService {
             responseBodyBuilder.setMessage(message);
             return responseBodyBuilder.build();
         } else {
-            return malformedNote("No User Token");
+            return malformedNote("No User Token", new Exception("TOKEN NOT INCLUDED IN REQUEST"));
         }
     }
 
@@ -277,7 +278,7 @@ public class FieldNoteService extends DHDPService implements FNService {
             mMySqlService.closeConnection(connection);
             return responseBodyBuilder.build();
         } else {
-            return malformedNote("No User Token");
+            return malformedNote("No User Token", new Exception("TOKEN NOT INCLUDED IN REQUEST"));
         }
     }
 
@@ -302,45 +303,37 @@ public class FieldNoteService extends DHDPService implements FNService {
         ResultSet resultSet = mMySqlService.executeQuery(connection, searchQuery);
 
         try {
-            // build results (search results - as fieldnotes)
+            // build results
             ArrayList<Map<String, Object>> results = new ArrayList<>();
             Map<String, Object> result = new HashMap<>();
 
             while (resultSet.next()) {
-                String dateStartString = resultSet.getString(DATE_START_COLUMN);
-                String timeStartString = resultSet.getString(TIME_START_COLUMN);
+                String dateStart = resultSet.getString(DATE_START_COLUMN) + " " + resultSet.getString(TIME_START_COLUMN);
+                String dateEnd = resultSet.getString(DATE_END_COLUMN) + " " + resultSet.getString(TIME_END_COLUMN);
 
-                String dateEndString = resultSet.getString(DATE_END_COLUMN);
-                String timeEndString = resultSet.getString(TIME_END_COLUMN);
+                FieldNote fieldNote = FieldNote.newBuilder().build();
+                fieldNote.put(PROJECT_KEY, resultSet.getString(PROJECT_NUMBER_COLUMN));
+                fieldNote.put(WELLNAME_KEY, resultSet.getString(WELLNAME_COLUMN));
+                fieldNote.put(LOCATION_KEY, resultSet.getString(LOCATION_COLUMN));
+                fieldNote.put(BILLING_KEY, resultSet.getString(BILLING_COLUMN));
+                fieldNote.put(START_DATETIME_KEY, dateStart);
+                fieldNote.put(END_DATETIME_KEY, dateEnd);
+                fieldNote.put(MILEAGE_START_COLUMN, Integer.parseInt(resultSet.getString(MILEAGE_START_COLUMN)));
+                fieldNote.put(MILEAGE_END_COLUMN, Integer.parseInt(resultSet.getString(MILEAGE_END_COLUMN)));
+                fieldNote.put(DESCRIPTION_KEY, resultSet.getString(DESCRIPTION_COLUMN));
+                fieldNote.put(GPS_KEY, resultSet.getString(GPS_COLUMN));
 
-                long startTimestampMillis = mTimeService.getDateInMillis(dateStartString + " " + timeStartString);
-                long endTimestampMillis = mTimeService.getDateInMillis(dateEndString + " " + timeEndString);
-
-                GpsCoord gps = null;
-                String gpsString = resultSet.getString(GPS_COLUMN);
-                if (!gpsString.equals("Not Provided")) {
-                    gps = GpsCoord.newBuilder()
-                            .setLatitude(Double.parseDouble(gpsString.substring(0, gpsString.indexOf(","))))
-                            .setLongitude(Double.parseDouble(gpsString.substring(gpsString.indexOf("," + 2))))
-                            .build();
-                }
-
-                result.put(resultSet.getString(TICKET_NUMBER_COLUMN), FieldNote.newBuilder()
-                        .setProject(resultSet.getString(PROJECT_NUMBER_COLUMN))
-                        .setWellname(resultSet.getString(WELLNAME_COLUMN))
-                        .setLocation(resultSet.getString(LOCATION_COLUMN))
-                        .setBillingType(resultSet.getString(BILLING_COLUMN))
-                        .setStartTimeStampMillis(startTimestampMillis)
-                        .setEndTimestampMillis(endTimestampMillis)
-                        .setMileageStart(Integer.parseInt(resultSet.getString(MILEAGE_START_COLUMN)))
-                        .setMileageEnd(Integer.parseInt(resultSet.getString(MILEAGE_END_COLUMN)))
-                        .setDescription(resultSet.getString(DESCRIPTION_COLUMN))
-                        .setGPSCoords(gps)
-                        .build());
+                result.put(resultSet.getString(TICKET_NUMBER_COLUMN), fieldNote);
 
                 results.add(result);
             }
-            String message = "Search Successful";
+
+            String message;
+            if (!results.isEmpty()) {
+                message = "Search Successful";
+            } else {
+                message = "No Results Found";
+            }
 
             responseBodyBuilder.setResponseType(DHDPResponseType.SUCCESS);
             responseBodyBuilder.setMessage(message);
@@ -375,8 +368,8 @@ public class FieldNoteService extends DHDPService implements FNService {
                 String dateEndString = resultSet.getString(DATE_END_COLUMN);
                 String timeEndString = resultSet.getString(TIME_END_COLUMN);
 
-                long startTimestampMillis = mTimeService.getDateInMillis(dateStartString + " " + timeStartString);
-                long endTimestampMillis = mTimeService.getDateInMillis(dateEndString + " " + timeEndString);
+                long startTimestampMillis = mTimeService.toDateInMillis(dateStartString + " " + timeStartString);
+                long endTimestampMillis = mTimeService.toDateInMillis(dateEndString + " " + timeEndString);
 
                 return FieldNote.newBuilder()
                         .setProject(resultSet.getString(PROJECT_NUMBER_COLUMN))
@@ -408,11 +401,18 @@ public class FieldNoteService extends DHDPService implements FNService {
     }
 
     @Override
-    public DHDPResponseBody malformedNote(final String message) {
+    public DHDPResponseBody malformedNote(final String message, Throwable e) {
         DHDPResponseBody.Builder response = DHDPResponseBody.newBuilder();
         response.setResponseType(DHDPResponseType.FAILURE);
         response.setMessage("Malformed Request: " + message);
-        response.setResults(null);
+
+        // put error into result
+        List<Map<String, Object>> errorResult = new ArrayList<>();
+        Map<String, Object> error = new HashMap<>();
+        error.put(e.getClass().getName(), e.getStackTrace());
+        errorResult.add(error);
+        response.setResults(errorResult);
+
         return response.build();
     }
 

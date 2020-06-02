@@ -26,7 +26,7 @@ public class FieldNoteServiceTest {
     @Before
     public void setup() {
         DHDPServiceRegistry registry = new DHDPServiceRegistry();
-        FieldNoteTimeService.initService(registry);
+        FieldNoteFormatService.initService(registry);
         MySqlService.initService(registry);
         FieldNoteValidationService.initService(registry);
         FieldNoteQueryService.initService(registry);
@@ -141,8 +141,18 @@ public class FieldNoteServiceTest {
         Map<String, Object> resultMap = results.get(0);
         // key is ticket number
         assertTrue(resultMap.containsKey(String.valueOf(updatedTicketNumber)));
-        // value is fn
-        assertEquals(fn, resultMap.get(String.valueOf(updatedTicketNumber)));
+
+        FieldNote result = (FieldNote) resultMap.get(String.valueOf(updatedTicketNumber));
+        // values from search result are as expected
+        assertEquals(fn.getProject(), result.get(PROJECT_KEY));
+        assertEquals(fn.getWellname(), result.get(WELLNAME_KEY));
+        assertEquals(fn.getLocation(), result.get(LOCATION_KEY));
+        assertEquals(fn.getBillingType(), result.get(BILLING_KEY));
+//        assertEquals(fn.getStartTimestampMillis(), result.get(START_DATETIME_KEY));
+//        assertEquals(fn.getEndTimestampMillis(), result.get(END_DATETIME_KEY));
+//        assertEquals(fn.getMileageStart(), result.get(START_MILEAGE_KEY));
+//        assertEquals(fn.getMileageEnd(), result.get(END_MILEAGE_KEY));
+        assertEquals(fn.getDescription(), result.get(DESCRIPTION_KEY));
 
         // DELETE
         response = mFieldNoteService.deleteNote(token, updatedTicketNumber);

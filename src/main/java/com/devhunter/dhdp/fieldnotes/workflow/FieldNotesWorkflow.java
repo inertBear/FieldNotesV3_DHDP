@@ -1,6 +1,7 @@
 package com.devhunter.dhdp.fieldnotes.workflow;
 
 import com.devhunter.DHDPConnector4J.header.DHDPHeader;
+import com.devhunter.DHDPConnector4J.model.GpsCoord;
 import com.devhunter.DHDPConnector4J.request.DHDPRequest;
 import com.devhunter.DHDPConnector4J.request.DHDPRequestBody;
 import com.devhunter.DHDPConnector4J.response.DHDPResponseBody;
@@ -32,6 +33,7 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
         DHDPHeader requestHeader = request.getHeader();
         DHDPRequestBody body = request.getBody();
 
+        //TODO: validate here instead of in service calls
         try {
             // determine what the request wanted to do
             switch (requestHeader.getRequestType()) {
@@ -50,7 +52,7 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
                             .setMileageStart(Integer.parseInt(body.getString(START_MILEAGE_KEY)))
                             .setMileageEnd(Integer.parseInt(body.getString(END_MILEAGE_KEY)))
                             .setDescription(body.getString(DESCRIPTION_KEY))
-                            .setGPSCoords(body.getGpsCoord(GPS))
+                            .setGPSCoords(new GpsCoord(body.getString(GPS_KEY)))
                             .build();
 
                     return mService.addNote(body.getString(TOKEN_KEY), fieldNote);
@@ -71,7 +73,7 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
                             .setMileageStart(body.getInt(START_MILEAGE_KEY))
                             .setMileageEnd(body.getInt(END_MILEAGE_KEY))
                             .setDescription(body.getString(DESCRIPTION_KEY))
-                            .setGPSCoords(body.getGpsCoord(GPS))
+                            .setGPSCoords(body.getGpsCoord(GPS_KEY))
                             .build();
 
                     return mService.updateNote(body.getString(TOKEN_KEY),
@@ -82,7 +84,7 @@ public class FieldNotesWorkflow extends DHDPWorkflow {
                     return mService.unsupportedNote(requestHeader);
             }
         } catch (Exception e) {
-            return mService.malformedNote("MISSING FIELDS");
+            return mService.malformedNote("MISSING FIELDS", e);
         }
     }
 }

@@ -17,7 +17,7 @@ public class FieldNoteQueryServiceTest {
     @Before
     public void setup() {
         DHDPServiceRegistry registry = new DHDPServiceRegistry();
-        FieldNoteTimeService.initService(registry);
+        FieldNoteFormatService.initService(registry);
         MySqlService.initService(registry);
         FieldNoteQueryService.initService(registry);
         mService = registry.resolve(FieldNoteQueryService.class);
