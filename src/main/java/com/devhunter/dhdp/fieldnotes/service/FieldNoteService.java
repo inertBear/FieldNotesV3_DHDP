@@ -305,7 +305,6 @@ public class FieldNoteService extends DHDPService implements FNService {
         try {
             // build results
             ArrayList<Map<String, Object>> results = new ArrayList<>();
-            Map<String, Object> result = new HashMap<>();
 
             while (resultSet.next()) {
                 String dateStart = resultSet.getString(DATE_START_COLUMN) + " " + resultSet.getString(TIME_START_COLUMN);
@@ -318,11 +317,12 @@ public class FieldNoteService extends DHDPService implements FNService {
                 fieldNote.put(BILLING_KEY, resultSet.getString(BILLING_COLUMN));
                 fieldNote.put(START_DATETIME_KEY, dateStart);
                 fieldNote.put(END_DATETIME_KEY, dateEnd);
-                fieldNote.put(MILEAGE_START_COLUMN, Integer.parseInt(resultSet.getString(MILEAGE_START_COLUMN)));
-                fieldNote.put(MILEAGE_END_COLUMN, Integer.parseInt(resultSet.getString(MILEAGE_END_COLUMN)));
+                fieldNote.put(START_MILEAGE_KEY, Integer.parseInt(resultSet.getString(MILEAGE_START_COLUMN)));
+                fieldNote.put(END_MILEAGE_KEY, Integer.parseInt(resultSet.getString(MILEAGE_END_COLUMN)));
                 fieldNote.put(DESCRIPTION_KEY, resultSet.getString(DESCRIPTION_COLUMN));
                 fieldNote.put(GPS_KEY, resultSet.getString(GPS_COLUMN));
 
+                Map<String, Object> result = new HashMap<>();
                 result.put(resultSet.getString(TICKET_NUMBER_COLUMN), fieldNote);
 
                 results.add(result);
